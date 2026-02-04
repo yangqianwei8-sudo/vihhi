@@ -9,8 +9,8 @@
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h4 class="mb-0">编辑项目：{{ project.project_number }} - {{ project.name }}</h4>
             <div>
-                <button type="button" class="btn btn-light btn-sm" onclick="saveDraft()">保存草稿</button>
-                <button type="button" class="btn btn-success btn-sm" onclick="submitForm()">提交申请</button>
+                <button type="button" class="btn btn-light btn-sm" data-action="project-create-save-draft">保存草稿</button>
+                <button type="button" class="btn btn-success btn-sm" data-action="project-create-submit">提交申请</button>
             </div>
         </div>
         <div class="card-body">
@@ -107,98 +107,8 @@
     </div>
 </div>
 
-<script>
-const professionOptions = {{ service_professions_map_json|default:"{}" }};
-const preselectedProfessionIds = new Set({{ selected_profession_ids_json|default:"[]" }});
-
-document.querySelectorAll('input[name="service_type"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        updateProfessionOptions(this.value);
-    });
-});
-
-function updateProfessionOptions(serviceTypeId) {
-    const container = document.getElementById('professionOptions');
-    container.innerHTML = '';
-    const options = professionOptions[String(serviceTypeId)] || [];
-    options.forEach(profession => {
-        const div = document.createElement('div');
-        div.className = 'form-check form-check-inline';
-        div.innerHTML = `
-            <input class="form-check-input" type="checkbox" name="service_profession_ids[]" id="prof_${profession.id}" value="${profession.id}" data-required="true">
-            <label class="form-check-label" for="prof_${profession.id}">${profession.name}</label>
-        `;
-        container.appendChild(div);
-    });
-
-    options.forEach(profession => {
-        const checkbox = document.getElementById(`prof_${profession.id}`);
-        if (checkbox && preselectedProfessionIds.has(profession.id)) {
-            checkbox.checked = true;
-        }
-    });
-}
-
-document.querySelector('input[name="name"]').addEventListener('input', function() {
-    document.getElementById('nameCount').textContent = this.value.length;
-});
-
-function saveDraft() {
-    document.getElementById('formAction').value = 'draft';
-    document.getElementById('projectForm').submit();
-}
-
-function submitForm() {
-    let isValid = true;
-    const serviceType = document.querySelector('input[name="service_type"]:checked');
-    const businessType = document.querySelector('select[name="business_type"]').value;
-    const designStage = document.querySelector('select[name="design_stage"]').value;
-    const selectedProfessions = document.querySelectorAll('input[name="service_profession_ids[]"]:checked');
-
-    if (!serviceType) {
-        alert('请选择服务类型');
-        isValid = false;
-    }
-    if (!businessType) {
-        alert('请选择项目业态');
-        isValid = false;
-    }
-    if (!designStage) {
-        alert('请选择图纸阶段');
-        isValid = false;
-    }
-    if (selectedProfessions.length === 0) {
-        alert('请选择至少一个服务专业');
-        isValid = false;
-    }
-
-    if (isValid) {
-        document.querySelectorAll('[data-required="true"]').forEach(el => {
-            el.setAttribute('required', 'required');
-        });
-        document.getElementById('formAction').value = 'submit';
-        document.getElementById('projectForm').submit();
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const nameInput = document.querySelector('input[name="name"]');
-    if (nameInput) {
-        document.getElementById('nameCount').textContent = nameInput.value.length;
-    }
-
-    const radios = document.querySelectorAll('input[name="service_type"]');
-    let activeServiceType = document.querySelector('input[name="service_type"]:checked');
-    if (!activeServiceType && radios.length > 0) {
-        radios[0].checked = true;
-        activeServiceType = radios[0];
-    }
-    if (activeServiceType) {
-        updateProfessionOptions(activeServiceType.value);
-    }
-
-});
-</script>
+<script type="application/json" id="projectEditConfig">{"pageMode":"edit","serviceProfessionsMap": {{ service_professions_map_json|default:"{}" }}, "selectedProfessionIds": {{ selected_profession_ids_json|default:"[]" }} }</script>
+<script src="{% static 'js/production/project-form.js' %}"></script>
 
 <style>
 .card {

@@ -261,6 +261,26 @@
       transition: width 0.3s ease;
     }
 
+    /* A3 治理：重复样式抽 class，仅保留动态 width 的 inline */
+    .track-messages-wrap { margin-bottom: 16px; }
+    .track-alert-item { margin-bottom: 8px; }
+    .track-form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .track-form-group--no-mb { margin-bottom: 0; }
+    .track-form-group--mb { margin-bottom: 16px; }
+    .track-form-error { font-size: 12px; color: #dc3545; margin-top: 4px; }
+    .track-form-help { font-size: 11px; color: #6c757d; margin-top: 4px; }
+    .track-radio-group { display: flex; gap: 16px; align-items: center; }
+    .track-radio-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .track-radio-input { width: 18px; height: 18px; }
+    .track-progress-bar--mt { margin-top: 8px; }
+    .track-list-date { font-size: 12px; color: #333333; font-weight: 500; }
+    .track-list-time { font-size: 12px; color: #999999; }
+    .track-list-desc { font-size: 12px; color: #333333; max-width: 300px; }
+    .track-list-muted { font-size: 12px; color: #999999; }
+    .track-list-placeholder { color: #999999; }
+    .track-list-flex { display: flex; align-items: center; gap: 8px; }
+    .track-list-reason { font-size: 12px; color: #333333; }
+
     {% block tracking_custom_styles %}{% endblock %}
   </style>
 {% endblock module_styles %}
@@ -317,9 +337,9 @@
     <div class="track-form-body">
       {# 显示消息（成功/错误） #}
       {% if messages %}
-      <div style="margin-bottom: 16px;">
+      <div class="track-messages-wrap">
         {% for message in messages %}
-        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert" style="margin-bottom: 8px;">
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show track-alert-item" role="alert">
           {{ message }}
           <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
@@ -338,20 +358,20 @@
         
         {# 数字型：显示数字输入框和完成率 #}
         {% if value_type == "numeric" %}
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-          <div class="track-form-group" style="margin-bottom: 0;">
+        <div class="track-form-grid-2">
+          <div class="track-form-group track-form-group--no-mb">
             <label class="track-form-label required">当前值</label>
             {% block tracking_current_value_input %}
             {{ progress_form.current_value }}
             {% endblock %}
             {% if progress_form.current_value.errors %}
-            <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+            <div class="track-form-error">{{ progress_form.current_value.errors }}</div>
             {% endif %}
             {% if progress_form.current_value.help_text %}
-            <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.current_value.help_text }}</div>
+            <div class="track-form-help">{{ progress_form.current_value.help_text }}</div>
             {% endif %}
           </div>
-          <div class="track-form-group" style="margin-bottom: 0;">
+          <div class="track-form-group track-form-group--no-mb">
             <label class="track-form-label">预计完成率</label>
             <input type="text" class="track-form-input" id="predictedRate" readonly placeholder="自动计算">
           </div>
@@ -359,25 +379,25 @@
         
         {# 布尔型：显示完成状态选择 #}
         {% elif value_type == "boolean" %}
-        <div class="track-form-group" style="margin-bottom: 16px;">
+        <div class="track-form-group track-form-group--mb">
           <label class="track-form-label required">完成状态</label>
           {% block tracking_boolean_input %}
           {% if progress_form.current_value %}
           {{ progress_form.current_value }}
           {% if progress_form.current_value.errors %}
-          <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+          <div class="track-form-error">{{ progress_form.current_value.errors }}</div>
           {% endif %}
           {% if progress_form.current_value.help_text %}
-          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.current_value.help_text }}</div>
+          <div class="track-form-help">{{ progress_form.current_value.help_text }}</div>
           {% endif %}
           {% else %}
-          <div style="display: flex; gap: 16px; align-items: center;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-              <input type="radio" name="current_value" value="1" {% if tracking_object.current_value %}checked{% endif %} style="width: 18px; height: 18px;">
+          <div class="track-radio-group">
+            <label class="track-radio-label">
+              <input type="radio" name="current_value" value="1" class="track-radio-input" {% if tracking_object.current_value %}checked{% endif %}>
               <span>已完成</span>
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-              <input type="radio" name="current_value" value="0" {% if not tracking_object.current_value %}checked{% endif %} style="width: 18px; height: 18px;">
+            <label class="track-radio-label">
+              <input type="radio" name="current_value" value="0" class="track-radio-input" {% if not tracking_object.current_value %}checked{% endif %}>
               <span>未完成</span>
             </label>
           </div>
@@ -387,30 +407,30 @@
         
         {# 百分比型：显示百分比输入框 #}
         {% elif value_type == "percentage" %}
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-          <div class="track-form-group" style="margin-bottom: 0;">
+        <div class="track-form-grid-2">
+          <div class="track-form-group track-form-group--no-mb">
             <label class="track-form-label required">完成百分比</label>
             {% block tracking_percentage_input %}
             {% if progress_form.current_value %}
             {{ progress_form.current_value }}
             {% if progress_form.current_value.errors %}
-            <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+            <div class="track-form-error">{{ progress_form.current_value.errors }}</div>
             {% endif %}
             {% if progress_form.current_value.help_text %}
-            <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.current_value.help_text }}</div>
+            <div class="track-form-help">{{ progress_form.current_value.help_text }}</div>
             {% endif %}
             {% else %}
             <input type="number" name="current_value" class="track-form-input" 
                    value="{{ tracking_object.current_value|default:0 }}" 
                    min="0" max="100" step="1" 
                    placeholder="0-100">
-            <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">请输入0-100之间的百分比值</div>
+            <div class="track-form-help">请输入0-100之间的百分比值</div>
             {% endif %}
             {% endblock %}
           </div>
-          <div class="track-form-group" style="margin-bottom: 0;">
+          <div class="track-form-group track-form-group--no-mb">
             <label class="track-form-label">进度条</label>
-            <div class="track-progress-bar" style="margin-top: 8px;">
+            <div class="track-progress-bar track-progress-bar--mt">
               <div class="track-progress-fill" id="percentageProgressBar" style="width: {{ tracking_object.current_value|default:0 }}%"></div>
             </div>
           </div>
@@ -418,16 +438,16 @@
         
         {# 选择型：显示下拉选择框 #}
         {% elif value_type == "choice" %}
-        <div class="track-form-group" style="margin-bottom: 16px;">
+        <div class="track-form-group track-form-group--mb">
           <label class="track-form-label required">当前阶段</label>
           {% block tracking_choice_input %}
           {% if progress_form.current_value %}
           {{ progress_form.current_value }}
           {% if progress_form.current_value.errors %}
-          <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+          <div class="track-form-error">{{ progress_form.current_value.errors }}</div>
           {% endif %}
           {% if progress_form.current_value.help_text %}
-          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.current_value.help_text }}</div>
+          <div class="track-form-help">{{ progress_form.current_value.help_text }}</div>
           {% endif %}
           {% else %}
           <select name="current_value" class="track-form-input">
@@ -443,42 +463,42 @@
         
         {# 文本型：显示文本输入框 #}
         {% elif value_type == "text" %}
-        <div class="track-form-group" style="margin-bottom: 16px;">
+        <div class="track-form-group track-form-group--mb">
           <label class="track-form-label required">当前进度</label>
           {% block tracking_text_input %}
           {% if progress_form.current_value %}
           {{ progress_form.current_value }}
           {% if progress_form.current_value.errors %}
-          <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+          <div class="track-form-error">{{ progress_form.current_value.errors }}</div>
           {% endif %}
           {% if progress_form.current_value.help_text %}
-          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.current_value.help_text }}</div>
+          <div class="track-form-help">{{ progress_form.current_value.help_text }}</div>
           {% endif %}
           {% else %}
           <input type="text" name="current_value" class="track-form-input" 
                  value="{{ tracking_object.current_value|default:'' }}" 
                  placeholder="请描述当前进度情况...">
-          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">请输入当前进度的文字描述</div>
+          <div class="track-form-help">请输入当前进度的文字描述</div>
           {% endif %}
           {% endblock %}
         </div>
         
         {# 默认：数字型 #}
         {% else %}
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-          <div class="track-form-group" style="margin-bottom: 0;">
+        <div class="track-form-grid-2">
+          <div class="track-form-group track-form-group--no-mb">
             <label class="track-form-label required">当前值</label>
             {% block tracking_default_value_input %}
             {{ progress_form.current_value }}
             {% endblock %}
             {% if progress_form.current_value.errors %}
-            <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+            <div class="track-form-error">{{ progress_form.current_value.errors }}</div>
             {% endif %}
             {% if progress_form.current_value.help_text %}
-            <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.current_value.help_text }}</div>
+            <div class="track-form-help">{{ progress_form.current_value.help_text }}</div>
             {% endif %}
           </div>
-          <div class="track-form-group" style="margin-bottom: 0;">
+          <div class="track-form-group track-form-group--no-mb">
             <label class="track-form-label">预计完成率</label>
             <input type="text" class="track-form-input" id="predictedRate" readonly placeholder="自动计算">
           </div>
@@ -487,16 +507,16 @@
         {% endwith %}
         {% endblock tracking_value_type %}
 
-        <div class="track-form-group">
+        <div class="track-form-group track-form-group--mb">
           <label class="track-form-label required">进度说明</label>
           {% block tracking_progress_description_input %}
           {{ progress_form.progress_description }}
           {% endblock %}
           {% if progress_form.progress_description.errors %}
-          <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.progress_description.errors }}</div>
+          <div class="track-form-error">{{ progress_form.progress_description.errors }}</div>
           {% endif %}
           {% if progress_form.progress_description.help_text %}
-          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.progress_description.help_text }}</div>
+          <div class="track-form-help">{{ progress_form.progress_description.help_text }}</div>
           {% endif %}
         </div>
 
@@ -630,8 +650,8 @@
           {% for record in page_obj %}
           <tr>
             <td>
-              <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ record.recorded_time|date:"Y-m-d" }}</div>
-              <div style="font-size: 12px; color: #999999;">{{ record.recorded_time|date:"H:i" }}</div>
+              <div class="track-list-date">{{ record.recorded_time|date:"Y-m-d" }}</div>
+              <div class="track-list-time">{{ record.recorded_time|date:"H:i" }}</div>
             </td>
             <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
             <td>
@@ -672,7 +692,7 @@
               </div>
             </td>
             <td>
-              <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ record.progress_description|truncatewords:15 }}</div>
+              <div class="track-list-desc">{{ record.progress_description|truncatewords:15 }}</div>
             </td>
             <td>
               {% block tracking_record_notes_display %}
@@ -681,17 +701,17 @@
                 {# 文本型：使用 extract_notes 过滤器提取备注部分 #}
                 {% with extracted_notes=record.notes|extract_notes %}
                   {% if extracted_notes %}
-                    <div style="font-size: 12px; color: #999999;">{{ extracted_notes|truncatewords:10 }}</div>
+                    <div class="track-list-muted">{{ extracted_notes|truncatewords:10 }}</div>
                   {% else %}
-                    <span style="color: #999999;">-</span>
+                    <span class="track-list-placeholder">-</span>
                   {% endif %}
                 {% endwith %}
               {% else %}
                 {# 非文本型：正常显示备注 #}
                 {% if record.notes %}
-                <div style="font-size: 12px; color: #999999;">{{ record.notes|truncatewords:10 }}</div>
+                <div class="track-list-muted">{{ record.notes|truncatewords:10 }}</div>
                 {% else %}
-                <span style="color: #999999;">-</span>
+                <span class="track-list-placeholder">-</span>
                 {% endif %}
               {% endif %}
               {% endwith %}
@@ -746,17 +766,17 @@
             {% for log in status_logs %}
             <tr>
               <td>
-                <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ log.changed_time|date:"Y-m-d" }}</div>
-                <div style="font-size: 12px; color: #999999;">{{ log.changed_time|date:"H:i" }}</div>
+                <div class="track-list-date">{{ log.changed_time|date:"Y-m-d" }}</div>
+                <div class="track-list-time">{{ log.changed_time|date:"H:i" }}</div>
               </td>
               <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="track-list-flex">
                   <span class="list-badge">
                     {% block tracking_status_log_display %}
                     {{ log.old_status|tracking_status_display }}
                     {% endblock %}
                   </span>
-                  <span style="color: #999999;">→</span>
+                  <span class="track-list-placeholder">→</span>
                   <span class="list-badge">
                     {% block tracking_status_log_new_display %}
                     {{ log.new_status|tracking_status_display }}
@@ -768,14 +788,14 @@
                 {% if log.changed_by %}
                 {{ log.changed_by.get_full_name|default:log.changed_by.username }}
                 {% else %}
-                <span style="color: #999999;">-</span>
+                <span class="track-list-placeholder">-</span>
                 {% endif %}
               </td>
               <td>
                 {% if log.change_reason %}
-                <div style="font-size: 12px; color: #333333;">{{ log.change_reason|truncatewords:15 }}</div>
+                <div class="track-list-reason">{{ log.change_reason|truncatewords:15 }}</div>
                 {% else %}
-                <span style="color: #999999;">-</span>
+                <span class="track-list-placeholder">-</span>
                 {% endif %}
               </td>
             </tr>
@@ -819,20 +839,20 @@
             {% for adjustment in adjustments %}
             <tr>
               <td>
-                <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ adjustment.created_time|date:"Y-m-d" }}</div>
-                <div style="font-size: 12px; color: #999999;">{{ adjustment.created_time|date:"H:i" }}</div>
+                <div class="track-list-date">{{ adjustment.created_time|date:"Y-m-d" }}</div>
+                <div class="track-list-time">{{ adjustment.created_time|date:"H:i" }}</div>
               </td>
               <td>
                 <span class="list-badge list-badge-{{ adjustment.status }}">{{ adjustment.get_status_display }}</span>
               </td>
               <td>
-                <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ adjustment.adjustment_reason|truncatewords:15 }}</div>
+                <div class="track-list-desc">{{ adjustment.adjustment_reason|truncatewords:15 }}</div>
               </td>
               <td>
                 {% if adjustment.approved_by %}
                 {{ adjustment.approved_by.get_full_name|default:adjustment.approved_by.username }}
                 {% else %}
-                <span style="color: #999999;">-</span>
+                <span class="track-list-placeholder">-</span>
                 {% endif %}
               </td>
             </tr>

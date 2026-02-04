@@ -5,6 +5,12 @@
 
 {% block extra_head %}
 {{ block.super }}
+<style>
+  /* B3 治理：审批详情内联样式归位 */
+  .approval-detail-alert-inline { font-size: 0.875rem; display: inline-block; }
+  .approval-detail-obsolete-hint { font-size: 0.75rem; }
+  .approval-detail-info-block { font-size: 0.875rem; }
+</style>
 {% endblock %}
 
 {# 第一块：仅当有业务详情页链接时显示“查看详情”，避免点击后跳转到 # 不跳转 #}
@@ -34,9 +40,9 @@
       <h3 class="detail-card-title">
         <i class="fas fa-history"></i> 审批记录
         {% if instance.status == 'approved' %}
-        <div class="alert alert-success mb-0 py-2 px-3 ms-2" style="font-size: 0.875rem; display: inline-block;"><i class="bi bi-check-circle"></i> 审批流程已完成</div>
+        <div class="alert alert-success mb-0 py-2 px-3 ms-2 approval-detail-alert-inline"><i class="bi bi-check-circle"></i> 审批流程已完成</div>
         {% elif instance.status == 'rejected' %}
-        <div class="alert alert-danger mb-0 py-2 px-3 ms-2" style="font-size: 0.875rem; display: inline-block;"><i class="bi bi-x-circle"></i> 审批流程已驳回</div>
+        <div class="alert alert-danger mb-0 py-2 px-3 ms-2 approval-detail-alert-inline"><i class="bi bi-x-circle"></i> 审批流程已驳回</div>
         {% endif %}
       </h3>
     </div>
@@ -48,7 +54,7 @@
           <tbody>
             {% for record in records %}
             <tr {% if record.is_obsolete %}class="table-secondary opacity-75" title="此节点已由他人处理完成，此记录无需再处理"{% endif %}>
-              <td>{{ record.node.name }}{% if record.is_obsolete %}<small class="text-muted d-block" style="font-size: 0.75rem;">（已由他人处理）</small>{% endif %}</td>
+              <td>{{ record.node.name }}{% if record.is_obsolete %}<small class="text-muted d-block approval-detail-obsolete-hint">（已由他人处理）</small>{% endif %}</td>
               <td>{{ record.approver.username }}</td>
               <td>{% if record.result == 'approved' %}<span class="badge bg-success">通过</span>{% elif record.result == 'rejected' %}<span class="badge bg-danger">驳回</span>{% elif record.result == 'transferred' %}<span class="badge bg-info">转交</span>{% elif record.result == 'withdrawn' %}<span class="badge bg-secondary">撤回</span>{% else %}<span class="badge bg-warning">待审批</span>{% endif %}</td>
               <td>{{ record.comment|default:"-" }}</td>
@@ -59,7 +65,7 @@
         </table>
       </div>
       {% if instance.status != 'pending' %}
-      <div class="alert alert-info mt-3 mb-0" style="font-size: 0.875rem;"><i class="bi bi-info-circle"></i> <strong>说明：</strong>审批流程已{{ instance.get_status_display }}。表格中灰色显示的"待审批"记录表示该节点已由其他审批人处理完成，这些记录无需再处理。</div>
+      <div class="alert alert-info mt-3 mb-0 approval-detail-info-block"><i class="bi bi-info-circle"></i> <strong>说明：</strong>审批流程已{{ instance.get_status_display }}。表格中灰色显示的"待审批"记录表示该节点已由其他审批人处理完成，这些记录无需再处理。</div>
       {% endif %}
       {% else %}
       <p class="text-muted text-center py-4">暂无审批记录</p>
@@ -122,26 +128,5 @@
 
 {% block extra_js %}
 {{ block.super }}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const approvalForm = document.getElementById('approvalForm');
-  if (approvalForm) {
-    approvalForm.addEventListener('submit', function(e) {
-      const action = e.submitter?.value || e.target.querySelector('button[type="submit"][name="action"]')?.value;
-      if (action === 'approve' || action === 'reject') {
-        const comment = document.getElementById('approval_comment')?.value || '';
-        if (!comment || comment.trim() === '') {
-          e.preventDefault();
-          alert('请输入审批意见');
-          return false;
-        }
-        if (!confirm(`确认${action === 'approve' ? '通过' : '驳回'}此审批吗？`)) {
-          e.preventDefault();
-          return false;
-        }
-      }
-    });
-  }
-});
-</script>
+<script src="{% static 'js/workflow/approval-detail-three-column.js' %}"></script>
 {% endblock %}

@@ -38,6 +38,17 @@
         background: #e2e3e5;
         color: #383d41;
     }
+    /* B2 治理：表头列宽、空状态提示、列设置模态表头 */
+    .my-application-list-table thead th:nth-child(1) { width: 12%; }
+    .my-application-list-table thead th:nth-child(2) { width: 15%; }
+    .my-application-list-table thead th:nth-child(3) { width: 10%; }
+    .my-application-list-table thead th:nth-child(4) { width: 8%; }
+    .my-application-list-table thead th:nth-child(5) { width: 12%; }
+    .my-application-list-table thead th:nth-child(6) { width: 15%; }
+    .my-application-list-table thead th:nth-child(7) { width: 18%; }
+    .list-empty-hint { font-size: 0.9rem; margin-top: 8px; }
+    .modal-col-display { width: 60px; }
+    .modal-col-sort { width: 50px; }
   </style>
 {% endblock module_styles %}
 
@@ -47,7 +58,7 @@
 
 {# 操作栏 - 导出按钮 #}
 {% block pm_actions %}
-  <a href="#" class="btn btn-outline-primary btn-sm" onclick="alert('导出功能开发中'); return false;">
+  <a href="#" class="btn btn-outline-primary btn-sm" data-action="workflow-export-placeholder">
     <i class="bi bi-download"></i> 导出数据
   </a>
 {% endblock pm_actions %}
@@ -56,7 +67,23 @@
 {% block pm_content %}
   {# 筛选器区域 #}
   {% block list_filters_section %}
-  <div class="list-page-filters">
+  <div class="list-page-filters card">
+    <div class="card-body list-page-filters-body">
+      {# 筛选标签：全部 + 业务标签（与 list_page_base 一致） #}
+      {% block list_filter_tags %}
+      <div class="list-page-filter-tags-wrap">
+        <span class="list-page-filter-tags-label">筛选：</span>
+        <nav class="list-page-filter-tags" aria-label="筛选标签">
+          <a class="list-page-filter-tag {% if not request.GET.status %}active{% endif %}" href="{{ request.path }}">全部</a>
+          {% block list_filter_tags_extra %}
+          <a class="list-page-filter-tag {% if request.GET.status == 'pending' %}active{% endif %}" href="?status=pending">审批中</a>
+          <a class="list-page-filter-tag {% if request.GET.status == 'approved' %}active{% endif %}" href="?status=approved">已通过</a>
+          <a class="list-page-filter-tag {% if request.GET.status == 'rejected' %}active{% endif %}" href="?status=rejected">已驳回</a>
+          <a class="list-page-filter-tag {% if request.GET.status == 'withdrawn' %}active{% endif %}" href="?status=withdrawn">已撤回</a>
+          {% endblock list_filter_tags_extra %}
+        </nav>
+      </div>
+      {% endblock list_filter_tags %}
     <div class="list-page-filter-row">
       <form id="filterForm" method="get">
         {% block list_filters_content %}
@@ -102,6 +129,7 @@
       </div>
       {% endblock list_filter_actions %}
     </div>
+    </div>
   </div>
   {% endblock list_filters_section %}
 
@@ -109,23 +137,23 @@
   {% block list_table_section %}
     {% block list_table_content %}
       <div class="list-table-container">
-        <table class="list-table">
+        <table class="list-table my-application-list-table">
           <thead>
             <tr>
               {% block list_table_headers %}
-                <th style="width: 12%;">审批编号</th>
-                <th style="width: 15%;">流程名称</th>
-                <th style="width: 10%;">申请时间</th>
-                <th style="width: 8%;">状态</th>
-                <th style="width: 12%;">当前节点</th>
-                <th style="width: 15%;">关联对象</th>
-                <th style="width: 18%;">操作</th>
+                <th>审批编号</th>
+                <th>流程名称</th>
+                <th>申请时间</th>
+                <th>状态</th>
+                <th>当前节点</th>
+                <th>关联对象</th>
+                <th>操作</th>
               {% endblock list_table_headers %}
               {% block list_table_column_settings_header %}
                 {% if column_settings_btn|default:False %}
-                  <th class="column-settings-header" style="width: auto; min-width: 32px; position: relative; text-align: center;">
-                    <button type="button" class="btn btn-link btn-sm p-0" id="tableColumnSettingsBtn" title="自定义显示列" style="text-decoration: none; color: #FFC107 !important; border: none; background: none; padding: 0;">
-                      <i class="bi bi-gear-fill" style="color: #FFC107 !important; font-size: 1.1rem;"></i>
+                  <th class="column-settings-header">
+                    <button type="button" class="btn btn-link btn-sm p-0" id="tableColumnSettingsBtn" title="自定义显示列">
+                      <i class="bi bi-gear-fill"></i>
                     </button>
                   </th>
                 {% endif %}
@@ -187,7 +215,7 @@
                       </a>
                       {% if item.status == 'pending' and item.workflow.allow_withdraw and not item.completed_time %}
                       <span class="action-separator">|</span>
-                      <a href="#" class="action-delete" onclick="if(confirm('确定要撤回此审批吗？')) { window.location.href='{% url 'workflow_engine:approval_withdraw' item.id %}'; } return false;" title="撤回">
+                      <a href="#" class="action-delete" data-action="workflow-approval-withdraw" data-withdraw-url="{% url 'workflow_engine:approval_withdraw' item.id %}" title="撤回">
                         <i class="bi bi-arrow-counterclockwise"></i>
                       </a>
                       {% endif %}
@@ -203,7 +231,7 @@
                     <div class="list-empty-icon">📋</div>
                     <div class="list-empty-text">暂无申请记录</div>
                     {% block list_empty_hint %}
-                    <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
+                    <p class="text-muted list-empty-hint">
                       您提交的所有审批申请将显示在这里，包括审批中、已通过、已驳回等状态
                     </p>
                     {% endblock list_empty_hint %}
@@ -313,9 +341,9 @@
             <table class="table table-hover">
               <thead>
                 <tr>
-                  <th style="width: 60px;">显示</th>
+                  <th class="modal-col-display">显示</th>
                   <th>列名称</th>
-                  <th style="width: 50px;">排序</th>
+                  <th class="modal-col-sort">排序</th>
                 </tr>
               </thead>
               <tbody id="columnSettingsList">
@@ -383,181 +411,9 @@
   {% endif %}
 {% endblock pm_content %}
 
-{# JavaScript #}
+{# JavaScript：P3 S1 B2 治理，script 已迁入 workflow/my-application-list.js #}
 {% block module_extra_js %}
 {{ block.super }}
-<script>
-// 列设置功能
-{% if column_settings_btn|default:False %}
-(function() {
-    'use strict';
-    
-    const STORAGE_KEY = 'my_application_list_column_settings';
-    
-    // 获取所有列的定义
-    function getColumnDefinitions() {
-        return [
-            { key: 'instance_number', name: '审批编号', required: false },
-            { key: 'workflow_name', name: '流程名称', required: false },
-            { key: 'apply_time', name: '申请时间', required: false },
-            { key: 'status', name: '状态', required: false },
-            { key: 'current_node', name: '当前节点', required: false },
-            { key: 'content_object', name: '关联对象', required: false },
-            { key: 'actions', name: '操作', required: true }
-        ];
-    }
-    
-    // 加载保存的列设置
-    function loadColumnSettings() {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                return JSON.parse(saved);
-            }
-        } catch (e) {
-            console.warn('加载列设置失败:', e);
-        }
-        return null;
-    }
-    
-    // 保存列设置
-    function saveColumnSettings(settings) {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-            return true;
-        } catch (e) {
-            console.error('保存列设置失败:', e);
-            return false;
-        }
-    }
-    
-    // 应用列设置到表格
-    function applyColumnSettings() {
-        const settings = loadColumnSettings();
-        if (!settings) return;
-        
-        const table = document.querySelector('.list-table');
-        if (!table) return;
-        
-        const thead = table.querySelector('thead');
-        const tbody = table.querySelector('tbody');
-        if (!thead || !tbody) return;
-        
-        // 获取表头
-        const headerRow = thead.querySelector('tr');
-        if (!headerRow) return;
-        
-        const headers = Array.from(headerRow.querySelectorAll('th'));
-        const columnKeys = ['instance_number', 'workflow_name', 'apply_time', 'status', 'current_node', 'content_object', 'actions'];
-        
-        headers.forEach((th, index) => {
-            if (index < columnKeys.length) {
-                const key = columnKeys[index];
-                const visible = settings[key] !== false;
-                th.style.display = visible ? '' : 'none';
-            }
-        });
-        
-        // 获取表格行
-        const rows = tbody.querySelectorAll('tr');
-        rows.forEach(row => {
-            const cells = Array.from(row.querySelectorAll('td'));
-            cells.forEach((td, index) => {
-                if (index < columnKeys.length) {
-                    const key = columnKeys[index];
-                    const visible = settings[key] !== false;
-                    td.style.display = visible ? '' : 'none';
-                }
-            });
-        });
-    }
-    
-    // 初始化列设置模态框
-    function initColumnSettingsModal() {
-        const modal = document.getElementById('fieldsSettingsModal');
-        if (!modal) return;
-        
-        const settings = loadColumnSettings();
-        const toggles = modal.querySelectorAll('.column-toggle');
-        
-        toggles.forEach(toggle => {
-            const column = toggle.dataset.column;
-            if (settings && settings.hasOwnProperty(column)) {
-                toggle.checked = settings[column] !== false;
-            } else {
-                toggle.checked = true; // 默认显示
-            }
-        });
-    }
-    
-    // 保存按钮事件
-    const saveBtn = document.getElementById('saveColumnSettings');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', function() {
-            const settings = {};
-            const toggles = document.querySelectorAll('#columnSettingsList .column-toggle');
-            
-            toggles.forEach(toggle => {
-                const column = toggle.dataset.column;
-                settings[column] = toggle.checked;
-            });
-            
-            if (saveColumnSettings(settings)) {
-                applyColumnSettings();
-                const modal = bootstrap.Modal.getInstance(document.getElementById('fieldsSettingsModal'));
-                if (modal) modal.hide();
-                alert('列设置已保存');
-            } else {
-                alert('保存失败，请重试');
-            }
-        });
-    }
-    
-    // 重置按钮事件
-    const resetBtn = document.getElementById('resetColumnSettings');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', function() {
-            if (confirm('确定要重置为默认设置吗？')) {
-                localStorage.removeItem(STORAGE_KEY);
-                const toggles = document.querySelectorAll('#columnSettingsList .column-toggle');
-                toggles.forEach(toggle => {
-                    if (!toggle.disabled) {
-                        toggle.checked = true;
-                    }
-                });
-                applyColumnSettings();
-                alert('已重置为默认设置');
-            }
-        });
-    }
-    
-    // 绑定按钮点击事件
-    const settingsBtn = document.getElementById('tableColumnSettingsBtn');
-    if (settingsBtn) {
-        settingsBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const modalElement = document.getElementById('fieldsSettingsModal');
-            if (modalElement) {
-                initColumnSettingsModal();
-                const modal = new bootstrap.Modal(modalElement, {
-                    backdrop: true,
-                    keyboard: true
-                });
-                modal.show();
-            } else {
-                console.error('列设置模态框未找到');
-            }
-        });
-    }
-    
-    // 页面加载时应用设置
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', applyColumnSettings);
-    } else {
-        applyColumnSettings();
-    }
-})();
-{% endif %}
-</script>
+<script src="{% static 'js/workflow/my-application-list.js' %}"></script>
 {% endblock module_extra_js %}
 

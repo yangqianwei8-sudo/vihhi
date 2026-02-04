@@ -10,11 +10,11 @@
   各列表视图须使用 Paginator(queryset, 13) 或 request.GET.get('per_page', 13)，
   本模板仅展示 page_obj，不控制每页条数。
 
-  筛选区域说明：
-  1. 使用 Bootstrap 栅格：每排 5 个字段（row-cols-2 row-cols-md-5），筛选按钮计入最后一格
-  2. 基本筛选字段：默认提供「关键词」搜索框（list_filters_basic 块）
-  3. 额外筛选字段：子模板通过 list_filters_extra 添加，使用 col list-page-filter-item
-  4. 自定义筛选字段按钮：通过 show_filter_fields_settings_btn=True 显示
+  筛选区域说明（样式参照计划管理首页）：
+  1. 统一标题「全部」：横向 nav-tabs，首项为「全部」；子模板通过 list_filter_tags_extra 添加 <li class="nav-item"><a class="nav-link">…</a></li>；视图可传 url_all、active_filter_tag
+  2. 筛选栏：.list-page-filter-bar（白底、边框、圆角 4px，与 pm-filter-bar 一致），栅格每排 5 格含筛选/重置按钮
+  3. 基本筛选：list_filters_basic 默认关键词；list_filters_extra 为业务筛项
+  4. 自定义筛选字段按钮：show_filter_fields_settings_btn=True 时显示
 {% endcomment %}
 
 {% block module_styles %}
@@ -26,7 +26,6 @@
   {{ block.super }}
   <script type="application/json" id="listPageConfig">{"batchDeleteUrl": "{{ batch_delete_url|default:''|escapejs }}", "batchDeleteConfirmMessage": "{% filter escapejs %}{% block batch_delete_confirm_message %}确定要删除选中的 {count} 个项目吗？此操作不可恢复！{% endblock %}{% endfilter %}", "enableFilterFieldsSettings": {{ show_filter_fields_settings_btn|yesno:"true,false" }}, "filterFieldsContainerId": "filterFieldsContainer", "filterFieldsMaxEnabled": 10}</script>
   <script src="{% static 'js/list-checkbox.js' %}"></script>
-  <script src="{% static 'js/ui.js' %}"></script>
 {% endblock module_scripts %}
 
 {# 主标题 - 继承父模板的 pm_title 块 #}
@@ -49,53 +48,57 @@
   {# 隐藏的 CSRF token 字段，确保批量删除功能可以获取到 token #}
   {% csrf_token %}
 
-  {# 筛选器区域（使用卡片包裹） #}
+  {# 筛选器区域：统一标题「全部」+ nav-tabs + 筛选栏；保留 .list-page-filters 供 JS（如 filter-fields-settings.js）查找 #}
   {% block list_filters_section %}
-  <div class="card list-page-filters">
-    <div class="card-body list-page-filters-body">
-    {# 自定义筛选字段按钮 - 需配合 filter-fields-settings.js 及 listFiltersConfig 使用 #}
-    {% block list_filter_fields_settings_btn %}
-    <button type="button" class="btn btn-sm" id="settingsFilterFieldsBtn" title="自定义筛选字段"
-            style="display: {% if show_filter_fields_settings_btn %}inline-flex{% else %}none{% endif %};">
-      <i class="bi bi-gear"></i> 自定义筛选字段
-    </button>
-    {% endblock list_filter_fields_settings_btn %}
+  <div class="list-page-filters mb-4">
+    {# 横向标签：统一标题「全部」，其他标签由子模板 list_filter_tags_extra 定义 #}
+    {% block list_filter_tags %}
+    <ul class="nav nav-tabs list-page-filter-tabs" id="listPageFilterTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <a class="nav-link {% if not active_filter_tag %}active{% endif %}" href="{{ url_all|default:request.path }}" role="tab">全部</a>
+      </li>
+      {% block list_filter_tags_extra %}
+      {% endblock list_filter_tags_extra %}
+    </ul>
+    {% endblock list_filter_tags %}
 
-    <div class="list-page-filter-row row g-3 row-cols-2 row-cols-md-5" id="filterFieldsContainer">
-      <form id="filterForm" method="get" {% if filter_form_action %} action="{{ filter_form_action }}"{% endif %}>
-        {% block list_filters_content %}
-          {# 1. 基本的、通用的筛选字段（子模板可覆盖 list_filters_basic 扩展或替换） #}
+    {# 筛选栏：样式与计划管理首页 pm-filter-bar 一致 #}
+    <div class="list-page-filter-bar mb-0 mt-2 p-3 rounded">
+      {% block list_filter_fields_settings_btn %}
+      <button type="button" class="btn btn-sm {% if show_filter_fields_settings_btn %}d-inline-flex{% else %}d-none{% endif %}" id="settingsFilterFieldsBtn" title="自定义筛选字段">
+        <i class="bi bi-gear"></i> 自定义筛选字段
+      </button>
+      {% endblock list_filter_fields_settings_btn %}
+
+      <div class="list-page-filter-row row g-3 row-cols-2 row-cols-md-5 align-items-end" id="filterFieldsContainer">
+        <form id="filterForm" method="get" {% if filter_form_action %} action="{{ filter_form_action }}"{% endif %}>
+          {% block list_filters_content %}
           {% block list_filters_basic %}
           <div class="col list-page-filter-item" data-filter-key="search">
-            <label class="list-page-filter-label">关键词</label>
+            <label class="form-label list-page-filter-label">关键词</label>
             <input type="text" name="search" class="form-control form-control-sm"
                    placeholder="{% block search_placeholder %}搜索...{% endblock %}"
                    value="{{ search|default:'' }}">
           </div>
           {% endblock list_filters_basic %}
-          {# 2. 子模板在此添加额外的筛选字段（使用 col list-page-filter-item，每排 5 格含按钮） #}
           {% block list_filters_extra %}
           {% endblock list_filters_extra %}
-        {% endblock list_filters_content %}
-      </form>
-      {% block list_filter_actions %}
-      <!-- 筛选和重置按钮 - 计入每排第五格 -->
-      <div class="col list-page-filter-actions align-self-end">
-        <div class="d-flex gap-2">
-          <button type="submit" form="filterForm" class="btn btn-primary btn-sm">
-            <i class="bi bi-funnel"></i> 筛选
-          </button>
-          <button type="reset" form="filterForm" class="btn btn-secondary btn-sm">
-            <i class="bi bi-arrow-counterclockwise"></i> 重置
-          </button>
+          {% endblock list_filters_content %}
+        </form>
+        {% block list_filter_actions %}
+        <div class="col list-page-filter-actions align-self-end">
+          <div class="d-flex gap-2">
+            <button type="submit" form="filterForm" class="btn btn-primary btn-sm">
+              <i class="bi bi-funnel"></i> 筛选
+            </button>
+            <button type="reset" form="filterForm" class="btn btn-outline-secondary btn-sm">重置</button>
+          </div>
         </div>
+        {% endblock list_filter_actions %}
       </div>
-      {% endblock list_filter_actions %}
-    </div>
     </div>
   </div>
 
-  {# 筛选字段设置模态框 - 使用自定义筛选字段功能时需引入 filter-fields-settings.js 并配置 listFiltersConfig #}
   {% block list_filter_fields_settings_modal %}
   {% include "shared/_partials/_filter_fields_settings_modal.html" %}
   {% endblock list_filter_fields_settings_modal %}
@@ -127,7 +130,7 @@
               <tr>
                 {% block list_table_checkbox_header %}
                   {% if show_list_checkboxes|default:False %}
-                  <th style="width: 50px;"><input type="checkbox" id="selectAll" class="form-check-input" title="全选"></th>
+                  <th class="list-table-th-checkbox"><input type="checkbox" id="selectAll" class="form-check-input" title="全选"></th>
                   {% endif %}
                 {% endblock list_table_checkbox_header %}
                 {% block list_table_headers %}
@@ -135,9 +138,9 @@
                 {% endblock list_table_headers %}
                 {% block list_table_column_settings_header %}
                   {% if column_settings_btn|default:False %}
-                  <th class="column-settings-header" style="width: auto; min-width: 32px; position: relative; text-align: center;">
-                    <button type="button" class="btn btn-link btn-sm p-0" id="tableColumnSettingsBtn" title="自定义显示列" style="text-decoration: none; color: #FFC107 !important; border: none; background: none; padding: 0;">
-                      <i class="bi bi-gear-fill" style="color: #FFC107 !important; font-size: 1.1rem;"></i>
+                  <th class="column-settings-header">
+                    <button type="button" class="btn btn-link btn-sm p-0" id="tableColumnSettingsBtn" title="自定义显示列">
+                      <i class="bi bi-gear-fill"></i>
                     </button>
                   </th>
                   {% endif %}

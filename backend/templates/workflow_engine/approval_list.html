@@ -66,7 +66,7 @@
 
 {# 操作栏 - 导出按钮 #}
 {% block pm_actions %}
-  <a href="#" class="btn btn-outline-primary btn-sm" onclick="alert('导出功能开发中'); return false;">
+  <a href="#" class="btn btn-outline-primary btn-sm" data-action="workflow-export-placeholder">
     <i class="bi bi-download"></i> 导出数据
   </a>
 {% endblock pm_actions %}
@@ -79,7 +79,27 @@
 
   {# 筛选器区域 #}
   {% block list_filters_section %}
-  <div class="list-page-filters">
+  <div class="list-page-filters card">
+    <div class="card-body list-page-filters-body">
+      {# 筛选标签：全部 + 业务标签 #}
+      {% block list_filter_tags %}
+      <div class="list-page-filter-tags-wrap">
+        <span class="list-page-filter-tags-label">筛选：</span>
+        <nav class="list-page-filter-tags" aria-label="筛选标签">
+          <a class="list-page-filter-tag {% if not request.GET.status %}active{% endif %}" href="{{ request.path }}{% if request.GET.tab %}?tab={{ request.GET.tab }}{% endif %}">全部</a>
+          {% block list_filter_tags_extra %}
+          {% if tab == 'historical' or tab == 'my_submitted' %}
+          <a class="list-page-filter-tag {% if request.GET.status == 'draft' %}active{% endif %}" href="?tab={{ tab }}&status=draft">草稿</a>
+          <a class="list-page-filter-tag {% if request.GET.status == 'pending' %}active{% endif %}" href="?tab={{ tab }}&status=pending">审批中</a>
+          <a class="list-page-filter-tag {% if request.GET.status == 'approved' %}active{% endif %}" href="?tab={{ tab }}&status=approved">已通过</a>
+          <a class="list-page-filter-tag {% if request.GET.status == 'rejected' %}active{% endif %}" href="?tab={{ tab }}&status=rejected">已驳回</a>
+          <a class="list-page-filter-tag {% if request.GET.status == 'withdrawn' %}active{% endif %}" href="?tab={{ tab }}&status=withdrawn">已撤回</a>
+          <a class="list-page-filter-tag {% if request.GET.status == 'cancelled' %}active{% endif %}" href="?tab={{ tab }}&status=cancelled">已取消</a>
+          {% endif %}
+          {% endblock list_filter_tags_extra %}
+        </nav>
+      </div>
+      {% endblock list_filter_tags %}
     <div class="list-page-filter-row">
       <form id="filterForm" method="get">
         {% block list_filters_content %}
@@ -128,6 +148,7 @@
         </button>
       </div>
       {% endblock list_filter_actions %}
+    </div>
     </div>
   </div>
   {% endblock list_filters_section %}
@@ -260,7 +281,7 @@
         </td>
         <td>
           <div class="list-page-table-actions">
-            <a href="#" class="action-edit" data-bs-toggle="modal" data-bs-target="#approvalModal{{ item.id }}" onclick="loadApprovalModal({{ item.id }}); return false;" title="立即审批">
+            <a href="#" class="action-edit" data-bs-toggle="modal" data-bs-target="#approvalModal{{ item.id }}" data-action="workflow-load-approval-modal" data-instance-id="{{ item.id }}" title="立即审批">
               <i class="bi bi-check-circle"></i>
             </a>
             <span class="action-separator">|</span>
@@ -377,7 +398,7 @@
             </a>
             {% if item.status == 'pending' and item.workflow.allow_withdraw %}
             <span class="action-separator">|</span>
-            <a href="#" class="action-delete" onclick="if(confirm('确定要撤回此审批吗？')) { window.location.href='{% url 'workflow_engine:approval_withdraw' item.id %}'; } return false;" title="撤回">
+            <a href="#" class="action-delete" data-action="workflow-approval-withdraw" data-withdraw-url="{% url 'workflow_engine:approval_withdraw' item.id %}" title="撤回">
               <i class="bi bi-arrow-counterclockwise"></i>
             </a>
             {% endif %}
@@ -700,295 +721,8 @@
 {% endif %}
 {% endblock pm_content %}
 
-{# JavaScript #}
+{# JavaScript：P3 S1 B1 治理，script 已迁入 workflow/approval-list.js #}
 {% block module_extra_js %}
 {{ block.super }}
-<script>
-// 批量审批功能
-document.addEventListener('DOMContentLoaded', function() {
-    const batchApproveBtn = document.getElementById('batchApproveBtn');
-    const batchRejectBtn = document.getElementById('batchRejectBtn');
-    const batchApproveForm = document.getElementById('batchApproveForm');
-    const selectAllCheckbox = document.getElementById('selectAll');
-    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-    const selectedCountSpan = document.getElementById('selectedCount');
-    
-    // 全选/取消全选
-    if (selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', function() {
-            rowCheckboxes.forEach(function(checkbox) {
-                checkbox.checked = this.checked;
-            }, this);
-            updateBatchActions();
-        });
-    }
-    
-    // 单个复选框变化
-    rowCheckboxes.forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            updateBatchActions();
-            // 更新全选状态
-            if (selectAllCheckbox) {
-                const allChecked = Array.from(rowCheckboxes).every(cb => cb.checked);
-                selectAllCheckbox.checked = allChecked;
-            }
-        });
-    });
-    
-    // 更新批量操作栏显示
-    function updateBatchActions() {
-        const checked = document.querySelectorAll('.row-checkbox:checked');
-        if (checked.length > 0 && batchApproveForm) {
-            batchApproveForm.style.display = 'block';
-            if (selectedCountSpan) {
-                selectedCountSpan.textContent = checked.length;
-            }
-        } else if (batchApproveForm) {
-            batchApproveForm.style.display = 'none';
-        }
-    }
-    
-    // 批量通过
-    if (batchApproveBtn && batchApproveForm) {
-        batchApproveBtn.addEventListener('click', function() {
-            batchApprove('approve');
-        });
-    }
-    
-    // 批量驳回
-    if (batchRejectBtn && batchApproveForm) {
-        batchRejectBtn.addEventListener('click', function() {
-            batchApprove('reject');
-        });
-    }
-    
-    function batchApprove(action) {
-        const checked = document.querySelectorAll('.row-checkbox:checked');
-        
-        if (checked.length === 0) {
-            alert('请至少选择一个审批实例');
-            return;
-        }
-        
-        if (!confirm(`确定要${action === 'approve' ? '批量通过' : '批量驳回'} ${checked.length} 个审批吗？`)) {
-            return;
-        }
-        
-        // 设置操作类型
-        const actionInput = document.getElementById('batchAction');
-        if (actionInput) {
-            actionInput.value = action;
-        }
-        
-        // 清除之前添加的隐藏input（如果有）
-        const existingInputs = batchApproveForm.querySelectorAll('input[name="instance_ids"][type="hidden"]');
-        existingInputs.forEach(function(input) {
-            input.remove();
-        });
-        
-        // 收集所有选中的复选框值，创建隐藏input添加到表单中
-        checked.forEach(function(checkbox) {
-            const hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = 'instance_ids';
-            hiddenInput.value = checkbox.value;
-            batchApproveForm.appendChild(hiddenInput);
-        });
-        
-        // 提交表单
-        batchApproveForm.submit();
-    }
-});
-
-// 加载审批模态框数据
-function loadApprovalModal(instanceId) {
-    // 模态框内容会在模板中动态生成，这里可以添加额外的逻辑
-    const modal = document.getElementById('approvalModal' + instanceId);
-    if (modal) {
-        // 可以在这里加载额外的数据
-    }
-}
-
-// 列设置功能
-{% if column_settings_btn|default:False %}
-(function() {
-    'use strict';
-    
-    const STORAGE_KEY = 'approval_list_column_settings';
-    
-    // 获取所有列的定义
-    function getColumnDefinitions() {
-        return [
-            { key: 'checkbox', name: '选择', required: true },
-            { key: 'instance_number', name: '审批编号', required: false },
-            { key: 'workflow_name', name: '流程名称', required: false },
-            { key: 'applicant', name: '申请人', required: false },
-            { key: 'apply_time', name: '申请时间', required: false },
-            { key: 'status', name: '状态', required: false },
-            { key: 'current_node', name: '当前节点', required: false },
-            { key: 'content_object', name: '关联对象', required: false },
-            { key: 'actions', name: '操作', required: true }
-        ];
-    }
-    
-    // 加载保存的列设置
-    function loadColumnSettings() {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                return JSON.parse(saved);
-            }
-        } catch (e) {
-            console.warn('加载列设置失败:', e);
-        }
-        return null;
-    }
-    
-    // 保存列设置
-    function saveColumnSettings(settings) {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-            return true;
-        } catch (e) {
-            console.error('保存列设置失败:', e);
-            return false;
-        }
-    }
-    
-    // 应用列设置到表格
-    function applyColumnSettings() {
-        const settings = loadColumnSettings();
-        if (!settings) return;
-        
-        const table = document.querySelector('.list-table');
-        if (!table) return;
-        
-        const thead = table.querySelector('thead');
-        const tbody = table.querySelector('tbody');
-        if (!thead || !tbody) return;
-        
-        // 获取表头
-        const headerRow = thead.querySelector('tr');
-        if (!headerRow) return;
-        
-        const headers = Array.from(headerRow.querySelectorAll('th'));
-        const columnKeys = ['checkbox', 'instance_number', 'workflow_name', 'applicant', 'apply_time', 'status', 'current_node', 'content_object', 'actions'];
-        
-        headers.forEach((th, index) => {
-            if (index < columnKeys.length) {
-                const key = columnKeys[index];
-                const visible = settings[key] !== false;
-                th.style.display = visible ? '' : 'none';
-            }
-        });
-        
-        // 获取表格行
-        const rows = tbody.querySelectorAll('tr');
-        rows.forEach(row => {
-            const cells = Array.from(row.querySelectorAll('td'));
-            cells.forEach((td, index) => {
-                if (index < columnKeys.length) {
-                    const key = columnKeys[index];
-                    const visible = settings[key] !== false;
-                    td.style.display = visible ? '' : 'none';
-                }
-            });
-        });
-    }
-    
-    // 初始化列设置模态框
-    function initColumnSettingsModal() {
-        const modal = document.getElementById('fieldsSettingsModal');
-        if (!modal) return;
-        
-        const settings = loadColumnSettings();
-        const toggles = modal.querySelectorAll('.column-toggle');
-        
-        toggles.forEach(toggle => {
-            const column = toggle.dataset.column;
-            if (settings && settings.hasOwnProperty(column)) {
-                toggle.checked = settings[column] !== false;
-            } else {
-                toggle.checked = true; // 默认显示
-            }
-        });
-    }
-    
-    // 保存按钮事件
-    const saveBtn = document.getElementById('saveColumnSettings');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', function() {
-            const settings = {};
-            const toggles = document.querySelectorAll('#columnSettingsList .column-toggle');
-            
-            toggles.forEach(toggle => {
-                const column = toggle.dataset.column;
-                settings[column] = toggle.checked;
-            });
-            
-            if (saveColumnSettings(settings)) {
-                applyColumnSettings();
-                const modal = bootstrap.Modal.getInstance(document.getElementById('fieldsSettingsModal'));
-                if (modal) modal.hide();
-                alert('列设置已保存');
-            } else {
-                alert('保存失败，请重试');
-            }
-        });
-    }
-    
-    // 重置按钮事件
-    const resetBtn = document.getElementById('resetColumnSettings');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', function() {
-            if (confirm('确定要重置为默认设置吗？')) {
-                localStorage.removeItem(STORAGE_KEY);
-                const toggles = document.querySelectorAll('#columnSettingsList .column-toggle');
-                toggles.forEach(toggle => {
-                    if (!toggle.disabled) {
-                        toggle.checked = true;
-                    }
-                });
-                applyColumnSettings();
-                alert('已重置为默认设置');
-            }
-        });
-    }
-    
-    // 绑定按钮点击事件，手动打开模态框
-    const settingsBtn = document.getElementById('tableColumnSettingsBtn');
-    if (settingsBtn) {
-        settingsBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const modalElement = document.getElementById('fieldsSettingsModal');
-            if (modalElement) {
-                initColumnSettingsModal();
-                const modal = new bootstrap.Modal(modalElement, {
-                    backdrop: true,
-                    keyboard: true
-                });
-                modal.show();
-            } else {
-                console.error('列设置模态框未找到');
-            }
-        });
-    }
-    
-    // 模态框显示时初始化
-    const modalElement = document.getElementById('fieldsSettingsModal');
-    if (modalElement) {
-        modalElement.addEventListener('show.bs.modal', function() {
-            initColumnSettingsModal();
-        });
-    }
-    
-    // 页面加载时应用设置
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', applyColumnSettings);
-    } else {
-        applyColumnSettings();
-    }
-})();
-{% endif %}
-</script>
+<script src="{% static 'js/workflow/approval-list.js' %}"></script>
 {% endblock module_extra_js %}

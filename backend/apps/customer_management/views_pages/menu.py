@@ -26,7 +26,7 @@ CUSTOMER_MANAGEMENT_MENU = [
         'icon': '👥',
         'permission': 'customer_management.client.view',
         'children': [
-            {'id': 'customer_lead_list', 'label': '线索列表', 'icon': '📋', 'url_name': 'customer_pages:customer_lead_list', 'permission': 'customer_management.client.view'},
+            {'id': 'customer_lead_list', 'label': '新建线索', 'icon': '📋', 'url_name': 'customer_pages:customer_lead_list', 'permission': 'customer_management.client.view'},
             {'id': 'customer_list', 'label': '客户列表', 'icon': '📋', 'url_name': 'customer_pages:customer_list', 'permission': 'customer_management.client.view'},
             {'id': 'customer_public_sea', 'label': '客户公海', 'icon': '🌊', 'url_name': 'customer_pages:customer_public_sea', 'permission': 'customer_management.public_sea.view'},
         ]

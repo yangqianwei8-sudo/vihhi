@@ -26,6 +26,13 @@
         .team-hero h2 {
             font-weight: 700;
         }
+        .team-hero-subtitle {
+            letter-spacing: 1px;
+            opacity: 0.75;
+        }
+        .team-hero-badges {
+            opacity: 0.9;
+        }
         .summary-card {
             border-radius: 18px;
             background: #fff;
@@ -97,9 +104,9 @@
     <div class="team-hero mb-4">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
             <div>
-                <div class="text-uppercase small fw-semibold" style="letter-spacing: 1px; opacity: 0.75;">Team Configuration</div>
+                <div class="text-uppercase small fw-semibold team-hero-subtitle">Team Configuration</div>
                 <h2 class="mb-1">{{ project.name }}</h2>
-                <div class="d-flex flex-wrap gap-2 small" style="opacity:0.9;">
+                <div class="d-flex flex-wrap gap-2 small team-hero-badges">
                     <span class="badge bg-light text-dark">编号 {{ project.project_number }}</span>
                     <span class="badge bg-primary">{{ project.get_status_display }}</span>
                     <span class="badge bg-light text-dark">服务类型：{{ project.service_type.name|default:"未设置" }}</span>
@@ -109,7 +116,7 @@
             <div class="d-flex flex-wrap gap-2">
                 <a href="{% url 'production_pages:project_detail' project.id %}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> 返回详情</a>
                 <a href="{% url 'production_pages:project_monitor' %}" class="btn btn-outline-light btn-sm"><i class="bi bi-activity"></i> 查看监控</a>
-                <button class="btn btn-light btn-sm" type="button" onclick="openAddMemberDialog()"><i class="bi bi-person-plus"></i> 添加成员</button>
+                <button class="btn btn-light btn-sm" type="button" data-action="project-team-open-add-member"><i class="bi bi-person-plus"></i> 添加成员</button>
             </div>
         </div>
         <div class="row g-3 mt-3">
@@ -441,7 +448,7 @@
                                                 <td>{{ member.service_profession.name|default:'-' }}</td>
                                                 <td>{% if member.is_external %}<span class="badge bg-warning-subtle text-warning">外部</span>{% else %}<span class="badge bg-primary-subtle text-primary">内部</span>{% endif %}</td>
                                                 <td class="text-end">
-                                                    <button type="button" class="btn btn-outline-danger btn-sm" data-member-id="{{ member.id }}"><i class="bi bi-x"></i> 移除</button>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" data-action="project-team-remove-member" data-member-id="{{ member.id }}"><i class="bi bi-x"></i> 移除</button>
                                                 </td>
                                             </tr>
                                             {% empty %}
@@ -467,39 +474,6 @@
     </form>
 </div>
 
-<script>
-function openAddMemberDialog() {
-    const targetTabTrigger = document.querySelector('#profession-tab');
-    if (targetTabTrigger) {
-        const tabInstance = bootstrap.Tab.getOrCreateInstance(targetTabTrigger);
-        tabInstance.show();
-    }
-    const targetPanel = document.querySelector('#tab-professions');
-    if (targetPanel) {
-        targetPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        targetPanel.classList.add('focus-flash');
-        setTimeout(() => targetPanel.classList.remove('focus-flash'), 1500);
-    }
-}
-
-function removeMember(memberId) {
-    if (!confirm('确定要移除该成员吗？')) return;
-    fetch(`/api/project/project-teams/${memberId}/`, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        }
-    }).then(response => {
-        if (response.ok) {
-            location.reload();
-        } else {
-            alert('移除失败，请稍后再试');
-        }
-    });
-}
-
-document.querySelectorAll('[data-member-id]').forEach(btn => {
-    btn.addEventListener('click', () => removeMember(btn.dataset.memberId));
-});
-</script>
+<script type="application/json" id="projectTeamConfig">{"deleteUrlPattern": "/api/project/project-teams/"}</script>
+<script src="{% static 'js/production/project-team.js' %}"></script>
 {% endblock %}

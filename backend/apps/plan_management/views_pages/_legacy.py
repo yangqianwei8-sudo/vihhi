@@ -270,6 +270,12 @@ def plan_list(request):
     context['sidebar_title'] = '计划管理'
     context['sidebar_subtitle'] = 'Plan Management'
     
+    # 筛选标签「全部」链接：保留其他 GET 参数，去掉 status
+    get_copy = request.GET.copy()
+    get_copy.pop('status', None)
+    get_copy.pop('page', None)
+    url_all = request.path + ('?' + get_copy.urlencode() if get_copy else '')
+
     context.update({
         'page_obj': page_obj,
         'total_count': total_count,
@@ -285,6 +291,8 @@ def plan_list(request):
         'plan_type_filter': plan_type_filter,
         'plan_period_filter': plan_period_filter,
         'related_goal_filter': related_goal_filter,
+        'url_all': url_all,
+        'active_filter_tag': status_filter,
         'responsible_filter': responsible_id,  # 保持向后兼容
         'date_from': date_from,
         'date_to': date_to,
@@ -489,6 +497,12 @@ def strategic_goal_list(request):
         active_id='strategic_goal_list'
     )
     
+    # 筛选标签「全部」链接：保留其他 GET 参数，去掉 status
+    get_copy = request.GET.copy()
+    get_copy.pop('status', None)
+    get_copy.pop('page', None)
+    url_all = request.path + ('?' + get_copy.urlencode() if get_copy else '')
+
     context.update({
         'page_obj': page_obj,  # 使用 page_obj 以匹配新模板
         'total_count': total_count,
@@ -513,6 +527,8 @@ def strategic_goal_list(request):
         'show_list_checkboxes': True,
         'show_filter_fields_settings_btn': True,
         'can_create': _permission_granted('plan_management.manage_goal', permission_set),
+        'url_all': url_all,
+        'active_filter_tag': status_filter,
     })
     
     return render(request, "plan_management/strategic_goal_list.html", context)

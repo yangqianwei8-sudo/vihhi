@@ -396,6 +396,21 @@
     font-weight: 600;
     color: var(--vh-text, #1F2937);
   }
+
+  /* P3 S1 治理：inline style 抽 class */
+  .goal-card-header-inner { flex: 1; }
+  .goal-card-header-row { display: flex; align-items: center; margin-bottom: 8px; }
+  .goal-card-info-row { margin-bottom: 8px; }
+  .goal-card-info-gap { margin-left: 16px; }
+  .decompose-toggle { display: none; }
+  .decompose-toggle.show { display: block; }
+  .target-value-row { display: flex; align-items: center; gap: 8px; }
+  .target-value-input-flex { flex: 1; }
+  .target-value-unit { font-size: 0.9rem; color: var(--vh-text-muted, #6B7280); white-space: nowrap; padding: 0 8px; }
+  .stats-item-divider { border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 8px; }
+  .stats-item-extra { margin-top: 4px; }
+  .stats-item-muted { font-size: 0.85rem; color: #6B7280; }
+  .stats-item-muted-mt { font-size: 0.85rem; color: #6B7280; margin-top: 4px; }
 </style>
 {% endblock module_extra_css %}
 
@@ -417,8 +432,8 @@
             <li class="goal-tree-item" data-level="{{ level }}">
               <div class="goal-card" data-level="{{ level }}">
                 <div class="goal-card-header">
-                  <div style="flex: 1;">
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                  <div class="goal-card-header-inner">
+                    <div class="goal-card-header-row">
                       <h4 class="goal-card-title">
                         <a href="{% url 'plan_pages:strategic_goal_detail' goal_item.id %}">
                           {{ goal_item.name }}
@@ -436,12 +451,12 @@
                 </div>
 
                 <div class="goal-card-info">
-                  <div style="margin-bottom: 8px;">
+                  <div class="goal-card-info-row">
                     <strong>指标：</strong>{{ goal_item.indicator_name }}{% if goal_item.indicator_unit %} ({{ goal_item.indicator_unit }}){% endif %}
-                    <span style="margin-left: 16px;">
+                    <span class="goal-card-info-gap">
                       <strong>指标类型：</strong>{{ goal_item.get_indicator_type_display }}
                     </span>
-                    <span style="margin-left: 16px;">
+                    <span class="goal-card-info-gap">
                       <strong>目标值：</strong>
                       {% if goal_item.indicator_type == 'boolean' %}
                         <span class="text-muted">布尔型（完成/未完成）</span>
@@ -452,26 +467,26 @@
                       {% endif %}
                     </span>
                     {% if goal_item.weight > 0 %}
-                    <span style="margin-left: 16px;">
+                    <span class="goal-card-info-gap">
                       <strong>权重：</strong>{{ goal_item.weight }}%
                     </span>
                     {% endif %}
                   </div>
 
-                  <div style="margin-bottom: 8px;">
+                  <div class="goal-card-info-row">
                     {% if goal_item.start_date %}
                     <span>
                       <strong>开始：</strong>{{ goal_item.start_date|date:"Y-m-d" }}
                     </span>
                     {% endif %}
                     {% if goal_item.end_date %}
-                    <span style="margin-left: 16px;">
+                    <span class="goal-card-info-gap">
                       <strong>结束：</strong>{{ goal_item.end_date|date:"Y-m-d" }}
                     </span>
                     {% endif %}
                   </div>
 
-                  <div style="margin-bottom: 8px;">
+                  <div class="goal-card-info-row">
                     <span>
                       <strong>当前值：</strong>
                       {% if goal_item.indicator_type == 'boolean' %}
@@ -488,7 +503,7 @@
                         {{ goal_item.current_value }}{% if goal_item.indicator_unit %} {{ goal_item.indicator_unit }}{% endif %}
                       {% endif %}
                     </span>
-                    <span style="margin-left: 16px;">
+                    <span class="goal-card-info-gap">
                       <strong>完成率：</strong>{{ goal_item.completion_rate|floatformat:1 }}%
                     </span>
                   </div>
@@ -498,7 +513,7 @@
                       <strong>负责人：</strong>{{ goal_item.responsible_person.get_full_name|default:goal_item.responsible_person.username }}
                     </span>
                     {% if goal_item.responsible_department %}
-                    <span style="margin-left: 16px;">
+                    <span class="goal-card-info-gap">
                       <strong>部门：</strong>{{ goal_item.responsible_department.name }}
                     </span>
                     {% endif %}
@@ -560,7 +575,7 @@
               <div class="form-hint">选择分解方式后，将自动填充负责人信息</div>
             </div>
 
-            <div class="form-group" id="userSelectDiv" style="display: none;">
+            <div class="form-group decompose-toggle" id="userSelectDiv">
               <label class="form-label required">
                 <i class="bi bi-person"></i> 选择负责人
               </label>
@@ -621,7 +636,7 @@
               <div class="form-hint">继承父目标指标单位：{{ goal.indicator_unit|default:"无" }}</div>
             </div>
 
-            <div class="form-group" id="valueChoicesDiv" style="display: {% if goal.indicator_type == 'choice' %}block{% else %}none{% endif %};">
+            <div class="form-group decompose-toggle{% if goal.indicator_type == 'choice' %} show{% endif %}" id="valueChoicesDiv">
               <label class="form-label">
                 <i class="bi bi-list-check"></i> 选择项（JSON格式）
               </label>
@@ -629,7 +644,7 @@
               <div class="form-hint">选择型指标需要填写选项列表，JSON格式</div>
             </div>
 
-            <div class="form-group" id="departmentSelectDiv" style="display: none;">
+            <div class="form-group decompose-toggle" id="departmentSelectDiv">
               <label class="form-label required">
                 <i class="bi bi-building"></i> 选择部门
               </label>
@@ -665,15 +680,15 @@
                 </select>
                 <div class="form-hint" id="targetValueHint">继承指标：{{ goal.indicator_name }}（选择型）</div>
                 {% elif goal.indicator_type == 'percentage' %}
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <input type="number" name="target_value" class="form-control" id="targetValueInput" step="0.01" min="0" max="100" required placeholder="0.00" style="flex: 1;">
-                  <span style="font-size: 0.9rem; color: var(--vh-text-muted, #6B7280); white-space: nowrap; padding: 0 8px;">%</span>
+                <div class="target-value-row">
+                  <input type="number" name="target_value" class="form-control target-value-input-flex" id="targetValueInput" step="0.01" min="0" max="100" required placeholder="0.00">
+                  <span class="target-value-unit">%</span>
                 </div>
                 <div class="form-hint" id="targetValueHint">继承指标：{{ goal.indicator_name }}（百分比型：0-100%）</div>
                 {% else %}
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <input type="number" name="target_value" class="form-control" id="targetValueInput" step="0.01" required placeholder="0.00" style="flex: 1;">
-                  <span id="indicatorUnitDisplay" style="font-size: 0.9rem; color: var(--vh-text-muted, #6B7280); white-space: nowrap; padding: 0 8px;">{{ goal.indicator_unit|default:"" }}</span>
+                <div class="target-value-row">
+                  <input type="number" name="target_value" class="form-control target-value-input-flex" id="targetValueInput" step="0.01" required placeholder="0.00">
+                  <span id="indicatorUnitDisplay" class="target-value-unit">{{ goal.indicator_unit|default:"" }}</span>
                 </div>
                 <div class="form-hint" id="targetValueHint">继承指标：{{ goal.indicator_name }}{% if goal.indicator_unit %} ({{ goal.indicator_unit }}){% endif %}（数值型）</div>
                 {% endif %}
@@ -724,24 +739,24 @@
               <span class="stats-item-value">{{ goal.completion_rate|floatformat:0 }}%</span>
             </li>
             {% if child_goals_summary and child_goals_summary.display_mode != 'none' %}
-            <li class="stats-item" style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 8px;">
+            <li class="stats-item stats-item-divider">
               <span class="stats-item-label">子目标汇总</span>
-              <div style="margin-top: 4px;">
+              <div class="stats-item-extra">
                 {% if child_goals_summary.display_mode == 'sum' %}
-                  <div style="font-size: 0.85rem; color: #6B7280;">
+                  <div class="stats-item-muted">
                     目标值：{{ child_goals_summary.total_target_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}<br>
                     当前值：{{ child_goals_summary.total_current_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
                   </div>
                 {% elif child_goals_summary.display_mode == 'average' %}
-                  <div style="font-size: 0.85rem; color: #6B7280;">
+                  <div class="stats-item-muted">
                     平均值：{{ child_goals_summary.total_current_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
                   </div>
                 {% elif child_goals_summary.display_mode == 'count' %}
-                  <div style="font-size: 0.85rem; color: #6B7280;">
+                  <div class="stats-item-muted">
                     已完成：{{ child_goals_summary.total_current_value }} / {{ child_goals_summary.total_target_value }}
                   </div>
                 {% endif %}
-                <div style="font-size: 0.85rem; color: #6B7280; margin-top: 4px;">
+                <div class="stats-item-muted-mt">
                   平均完成率：{{ child_goals_summary.avg_completion_rate|floatformat:1 }}%
                 </div>
               </div>
@@ -755,286 +770,6 @@
 {% endblock pm_content %}
 
 {% block module_extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const decomposeMethodSelect = document.getElementById('decomposeMethodSelect');
-    const goalTypeSelect = document.getElementById('goalTypeSelect');
-    const indicatorTypeSelect = document.getElementById('indicatorTypeSelect');
-    const indicatorNameInput = document.getElementById('indicatorNameInput');
-    const indicatorUnitInput = document.getElementById('indicatorUnitInput');
-    const valueChoicesDiv = document.getElementById('valueChoicesDiv');
-    const valueChoicesInput = document.getElementById('valueChoicesInput');
-    const targetValueContainer = document.getElementById('targetValueContainer');
-    const departmentSelectDiv = document.getElementById('departmentSelectDiv');
-    const userSelectDiv = document.getElementById('userSelectDiv');
-    const departmentSelect = document.getElementById('departmentSelect');
-    const userSelect = document.getElementById('userSelect');
-    
-    // 父目标的指标信息（用于继承）
-    const parentIndicatorType = '{{ goal.indicator_type }}';
-    const parentIndicatorName = '{{ goal.indicator_name|escapejs }}';
-    const parentIndicatorUnit = '{{ goal.indicator_unit|escapejs }}';
-    const parentValueChoices = {{ goal.value_choices|safe|default:"[]" }};
-    
-    // 根据指标类型更新目标值输入字段
-    function updateTargetValueInput(indicatorType, valueChoices = []) {
-        if (!targetValueContainer) return;
-        
-        const indicatorName = indicatorNameInput ? indicatorNameInput.value : parentIndicatorName;
-        const indicatorUnit = indicatorUnitInput ? indicatorUnitInput.value : parentIndicatorUnit;
-        
-        let html = '';
-        let hint = '';
-        
-        if (indicatorType === 'boolean') {
-            html = '<select name="target_value" class="form-control" id="targetValueInput" required>' +
-                   '<option value="0">未完成</option>' +
-                   '<option value="1">已完成</option>' +
-                   '</select>';
-            hint = `继承指标：${indicatorName}（布尔型：完成/未完成）`;
-        } else if (indicatorType === 'text') {
-            html = '<input type="text" name="target_value" class="form-control" id="targetValueInput" required placeholder="请输入文本内容">';
-            hint = `继承指标：${indicatorName}（文本型）`;
-        } else if (indicatorType === 'choice') {
-            let options = '<option value="">请选择</option>';
-            if (valueChoices && valueChoices.length > 0) {
-                valueChoices.forEach(function(choice) {
-                    options += `<option value="${choice.value}">${choice.label}</option>`;
-                });
-            }
-            html = '<select name="target_value" class="form-control" id="targetValueInput" required>' + options + '</select>';
-            hint = `继承指标：${indicatorName}（选择型）`;
-        } else if (indicatorType === 'percentage') {
-            html = '<div style="display: flex; align-items: center; gap: 8px;">' +
-                   '<input type="number" name="target_value" class="form-control" id="targetValueInput" step="0.01" min="0" max="100" required placeholder="0.00" style="flex: 1;">' +
-                   '<span style="font-size: 0.9rem; color: var(--vh-text-muted, #6B7280); white-space: nowrap; padding: 0 8px;">%</span>' +
-                   '</div>';
-            hint = `继承指标：${indicatorName}（百分比型：0-100%）`;
-        } else {
-            const unitDisplay = indicatorUnit ? `<span id="indicatorUnitDisplay" style="font-size: 0.9rem; color: var(--vh-text-muted, #6B7280); white-space: nowrap; padding: 0 8px;">${indicatorUnit}</span>` : '';
-            html = '<div style="display: flex; align-items: center; gap: 8px;">' +
-                   '<input type="number" name="target_value" class="form-control" id="targetValueInput" step="0.01" required placeholder="0.00" style="flex: 1;">' +
-                   unitDisplay +
-                   '</div>';
-            hint = `继承指标：${indicatorName}${indicatorUnit ? ' (' + indicatorUnit + ')' : ''}（数值型）`;
-        }
-        
-        targetValueContainer.innerHTML = html + '<div class="form-hint" id="targetValueHint">' + hint + '</div>';
-    }
-    
-    // 指标类型变化时更新目标值输入
-    if (indicatorTypeSelect) {
-        indicatorTypeSelect.addEventListener('change', function() {
-            const selectedType = this.value;
-            // 显示/隐藏选择项输入
-            if (selectedType === 'choice') {
-                valueChoicesDiv.style.display = 'block';
-                valueChoicesInput.required = true;
-            } else {
-                valueChoicesDiv.style.display = 'none';
-                valueChoicesInput.required = false;
-            }
-            
-            // 更新目标值输入
-            if (selectedType) {
-                let choices = [];
-                if (selectedType === 'choice' && valueChoicesInput.value) {
-                    try {
-                        choices = JSON.parse(valueChoicesInput.value);
-                    } catch(e) {
-                        choices = parentValueChoices;
-                    }
-                } else if (selectedType === parentIndicatorType) {
-                    choices = parentValueChoices;
-                }
-                updateTargetValueInput(selectedType, choices);
-            }
-        });
-    }
-    
-    // 指标名称或单位变化时更新提示
-    if (indicatorNameInput) {
-        indicatorNameInput.addEventListener('input', function() {
-            if (indicatorTypeSelect && indicatorTypeSelect.value) {
-                let choices = [];
-                if (indicatorTypeSelect.value === 'choice' && valueChoicesInput.value) {
-                    try {
-                        choices = JSON.parse(valueChoicesInput.value);
-                    } catch(e) {
-                        choices = parentValueChoices;
-                    }
-                } else if (indicatorTypeSelect.value === parentIndicatorType) {
-                    choices = parentValueChoices;
-                }
-                updateTargetValueInput(indicatorTypeSelect.value, choices);
-            }
-        });
-    }
-    
-    if (indicatorUnitInput) {
-        indicatorUnitInput.addEventListener('input', function() {
-            if (indicatorTypeSelect && indicatorTypeSelect.value === 'numeric') {
-                updateTargetValueInput('numeric', []);
-            }
-        });
-    }
-    
-    // 选择项变化时更新目标值输入
-    if (valueChoicesInput) {
-        valueChoicesInput.addEventListener('input', function() {
-            if (indicatorTypeSelect && indicatorTypeSelect.value === 'choice') {
-                let choices = [];
-                if (this.value) {
-                    try {
-                        choices = JSON.parse(this.value);
-                    } catch(e) {
-                        // 解析失败时不更新
-                        return;
-                    }
-                }
-                updateTargetValueInput('choice', choices);
-            }
-        });
-    }
-
-    if (decomposeMethodSelect) {
-        decomposeMethodSelect.addEventListener('change', function() {
-            if (this.value === 'department') {
-                departmentSelectDiv.style.display = 'block';
-                userSelectDiv.style.display = 'block';
-                departmentSelect.required = true;
-                userSelect.required = true;
-            } else if (this.value === 'personal') {
-                departmentSelectDiv.style.display = 'none';
-                userSelectDiv.style.display = 'block';
-                departmentSelect.required = false;
-                userSelect.required = true;
-            } else {
-                departmentSelectDiv.style.display = 'none';
-                userSelectDiv.style.display = 'none';
-                departmentSelect.required = false;
-                userSelect.required = false;
-            }
-        });
-    }
-
-    const form = document.getElementById('createChildGoalForm');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-
-            if (!decomposeMethodSelect || !decomposeMethodSelect.value) {
-                alert('请选择分解方式');
-                if (decomposeMethodSelect) decomposeMethodSelect.focus();
-                return;
-            }
-
-            if (!goalTypeSelect || !goalTypeSelect.value) {
-                alert('请选择目标类型');
-                if (goalTypeSelect) goalTypeSelect.focus();
-                return;
-            }
-
-            if (!indicatorTypeSelect || !indicatorTypeSelect.value) {
-                alert('请选择指标类型');
-                if (indicatorTypeSelect) indicatorTypeSelect.focus();
-                return;
-            }
-
-            // 验证选择型指标的选择项
-            if (indicatorTypeSelect.value === 'choice') {
-                if (!valueChoicesInput.value) {
-                    alert('选择型指标需要填写选择项');
-                    valueChoicesInput.focus();
-                    return;
-                }
-                try {
-                    const choices = JSON.parse(valueChoicesInput.value);
-                    if (!Array.isArray(choices) || choices.length === 0) {
-                        alert('选择项必须是包含至少一个选项的JSON数组');
-                        valueChoicesInput.focus();
-                        return;
-                    }
-                } catch(e) {
-                    alert('选择项格式错误，请输入有效的JSON格式');
-                    valueChoicesInput.focus();
-                    return;
-                }
-            }
-
-            if (!userSelect.value) {
-                alert('请选择负责人');
-                userSelect.focus();
-                return;
-            }
-
-            if (decomposeMethodSelect.value === 'department' && !departmentSelect.value) {
-                alert('请选择部门');
-                departmentSelect.focus();
-                return;
-            }
-
-            const formData = new FormData(form);
-            // 确保分解方式字段被正确传递
-            formData.set('decompose_method', decomposeMethodSelect.value);
-            if (decomposeMethodSelect.value === 'personal') {
-                formData.delete('department_id');
-            }
-
-            const url = '{% url "plan_pages:create_child_goal" goal.id %}';
-
-            fetch(url, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-                },
-                credentials: 'same-origin'
-            })
-            .then(response => {
-                const contentType = response.headers.get('Content-Type') || '';
-                if (!contentType.includes('application/json')) {
-                    return response.text().then(text => {
-                        console.error('非JSON响应:', text.substring(0, 200));
-                        throw new Error('服务器返回了非JSON响应，可能是权限问题或服务器错误');
-                    });
-                }
-
-                if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.message || '请求失败');
-                    }).catch(err => {
-                        if (err.message) throw err;
-                        throw new Error('请求失败，状态码: ' + response.status);
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    window.location.reload();
-                } else {
-                    alert('创建失败：' + (data.message || '未知错误'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('创建失败：' + error.message);
-            });
-        });
-    }
-    
-    // 页面加载时初始化选择项字段
-    if (indicatorTypeSelect && indicatorTypeSelect.value === 'choice' && valueChoicesInput && parentValueChoices && parentValueChoices.length > 0) {
-        if (!valueChoicesInput.value) {
-            valueChoicesInput.value = JSON.stringify(parentValueChoices);
-        }
-    }
-});
-</script>
+<script type="application/json" id="strategicGoalDecomposeConfig">{"parentIndicatorType": "{{ goal.indicator_type|escapejs }}", "parentIndicatorName": "{{ goal.indicator_name|escapejs }}", "parentIndicatorUnit": "{{ goal.indicator_unit|escapejs }}", "parentValueChoices": {{ goal.value_choices|safe|default:"[]" }}, "createChildGoalUrl": "{% url 'plan_pages:create_child_goal' goal.id %}"}</script>
+<script src="{% static 'js/plan/strategic-goal-decompose.js' %}"></script>
 {% endblock module_extra_js %}

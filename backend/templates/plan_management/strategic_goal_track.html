@@ -36,63 +36,63 @@
         <h3 class="track-form-title">进度说明</h3>
       </div>
       <div class="track-form-body">
-        <div style="padding: 16px; background: #FFF3CD; border: 1px solid #FFC107; border-radius: 4px; margin-bottom: 16px;">
-          <div style="display: flex; align-items: start; gap: 12px;">
-            <div style="font-size: 20px;">⚠️</div>
-            <div style="flex: 1;">
-              <div style="font-weight: 600; margin-bottom: 8px; color: #856404;">此目标有子目标，进度由系统自动从子目标计算</div>
-              <div style="font-size: 13px; color: #856404; line-height: 1.6;">
-                <p style="margin: 0 0 8px 0;">• 父目标的进度值、当前值和完成率均由子目标自动计算得出</p>
-                <p style="margin: 0 0 8px 0;">• 如需更新进度，请更新子目标的进度，系统会自动更新父目标</p>
-                <p style="margin: 0;">• 父目标不允许手动更新进度</p>
+        <div class="track-alert-box">
+          <div class="track-alert-box-inner">
+            <div class="track-alert-icon">⚠️</div>
+            <div class="track-alert-body">
+              <div class="track-alert-title">此目标有子目标，进度由系统自动从子目标计算</div>
+              <div class="track-alert-text">
+                <p>• 父目标的进度值、当前值和完成率均由子目标自动计算得出</p>
+                <p>• 如需更新进度，请更新子目标的进度，系统会自动更新父目标</p>
+                <p>• 父目标不允许手动更新进度</p>
               </div>
             </div>
           </div>
         </div>
         
         {% if child_goals_summary and child_goals_summary.display_mode != 'none' %}
-        <div style="padding: 16px; background: #F8F9FA; border: 1px solid #DEE2E6; border-radius: 4px;">
-          <div style="font-weight: 600; margin-bottom: 12px; color: #495057;">子目标汇总信息</div>
+        <div class="track-summary-card">
+          <div class="track-summary-title">子目标汇总信息</div>
           {% if child_goals_summary.display_mode == 'sum' %}
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div class="track-summary-grid">
               <div>
-                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">目标值总和</div>
-                <div style="font-size: 18px; font-weight: 600; color: #1A1A1A;">
+                <div class="track-summary-label">目标值总和</div>
+                <div class="track-summary-value">
                   {{ child_goals_summary.total_target_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
                 </div>
               </div>
               <div>
-                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">当前值总和</div>
-                <div style="font-size: 18px; font-weight: 600; color: #1A1A1A;">
+                <div class="track-summary-label">当前值总和</div>
+                <div class="track-summary-value">
                   {{ child_goals_summary.total_current_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
                 </div>
               </div>
               <div>
-                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">平均完成率</div>
-                <div style="font-size: 18px; font-weight: 600; color: #1A1A1A;">
+                <div class="track-summary-label">平均完成率</div>
+                <div class="track-summary-value">
                   {{ child_goals_summary.avg_completion_rate|floatformat:1 }}%
                 </div>
               </div>
             </div>
           {% elif child_goals_summary.display_mode == 'average' %}
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div class="track-summary-grid">
               <div>
-                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">平均值</div>
-                <div style="font-size: 18px; font-weight: 600; color: #1A1A1A;">
+                <div class="track-summary-label">平均值</div>
+                <div class="track-summary-value">
                   {{ child_goals_summary.total_current_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
                 </div>
               </div>
               <div>
-                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">平均完成率</div>
-                <div style="font-size: 18px; font-weight: 600; color: #1A1A1A;">
+                <div class="track-summary-label">平均完成率</div>
+                <div class="track-summary-value">
                   {{ child_goals_summary.avg_completion_rate|floatformat:1 }}%
                 </div>
               </div>
             </div>
           {% elif child_goals_summary.display_mode == 'text' %}
             <div>
-              <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">平均完成率</div>
-              <div style="font-size: 18px; font-weight: 600; color: #1A1A1A;">
+              <div class="track-summary-label">平均完成率</div>
+              <div class="track-summary-value">
                 {{ child_goals_summary.avg_completion_rate|floatformat:1 }}%
               </div>
             </div>
@@ -100,8 +100,8 @@
         </div>
         {% endif %}
         
-        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #E0E0E0;">
-          <a href="{% url 'plan_pages:strategic_goal_decompose' goal.id %}" class="btn btn-outline-primary" style="text-decoration: none;">
+        <div class="track-section-divider">
+          <a href="{% url 'plan_pages:strategic_goal_decompose' goal.id %}" class="btn btn-outline-primary text-decoration-none">
             <i class="bi bi-diagram-3"></i> 查看子目标
           </a>
         </div>
@@ -134,8 +134,8 @@
   {% for record in page_obj %}
   <tr>
     <td>
-      <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ record.recorded_time|date:"Y-m-d" }}</div>
-      <div style="font-size: 12px; color: #999999;">{{ record.recorded_time|date:"H:i" }}</div>
+      <div class="track-list-date">{{ record.recorded_time|date:"Y-m-d" }}</div>
+      <div class="track-list-time">{{ record.recorded_time|date:"H:i" }}</div>
     </td>
     <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
     <td>
@@ -167,24 +167,24 @@
       </div>
     </td>
     <td>
-      <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ record.progress_description|truncatewords:15 }}</div>
+      <div class="track-list-desc">{{ record.progress_description|truncatewords:15 }}</div>
     </td>
     <td>
       {% if goal.indicator_type == 'text' %}
         {# 文本型：使用 extract_notes 过滤器提取备注部分 #}
         {% with extracted_notes=record.notes|extract_notes %}
           {% if extracted_notes %}
-            <div style="font-size: 12px; color: #999999;">{{ extracted_notes|truncatewords:10 }}</div>
+            <div class="track-list-muted">{{ extracted_notes|truncatewords:10 }}</div>
           {% else %}
-            <span style="color: #999999;">-</span>
+            <span class="track-list-placeholder">-</span>
           {% endif %}
         {% endwith %}
       {% else %}
         {# 非文本型：正常显示备注 #}
         {% if record.notes %}
-        <div style="font-size: 12px; color: #999999;">{{ record.notes|truncatewords:10 }}</div>
+        <div class="track-list-muted">{{ record.notes|truncatewords:10 }}</div>
         {% else %}
-        <span style="color: #999999;">-</span>
+        <span class="track-list-placeholder">-</span>
         {% endif %}
       {% endif %}
     </td>
@@ -210,7 +210,7 @@
   {{ block.super }}
 {% endblock %}
 
-{# 自定义样式（如果需要） #}
+{# 自定义样式：引入跟踪组件 CSS（P3 S1 治理） #}
 {% block tracking_custom_styles %}
-  {# 可以在这里添加额外的样式 #}
+  <link rel="stylesheet" href="{% static 'css/components/tracking.css' %}">
 {% endblock %}

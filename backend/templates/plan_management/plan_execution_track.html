@@ -38,7 +38,7 @@
     <label class="track-form-label">执行结果</label>
     {{ progress_form.execution_result }}
     {% if progress_form.execution_result.errors %}
-    <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.execution_result.errors }}</div>
+    <div class="track-form-error">{{ progress_form.execution_result.errors }}</div>
     {% endif %}
   </div>
   {% endif %}
@@ -48,7 +48,7 @@
     <label class="track-form-label">执行问题</label>
     {{ progress_form.execution_issues }}
     {% if progress_form.execution_issues.errors %}
-    <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.execution_issues.errors }}</div>
+    <div class="track-form-error">{{ progress_form.execution_issues.errors }}</div>
     {% endif %}
   </div>
   {% endif %}
@@ -71,8 +71,8 @@
   {% for record in page_obj %}
   <tr>
     <td>
-      <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ record.recorded_time|date:"Y-m-d" }}</div>
-      <div style="font-size: 12px; color: #999999;">{{ record.recorded_time|date:"H:i" }}</div>
+      <div class="track-list-date">{{ record.recorded_time|date:"Y-m-d" }}</div>
+      <div class="track-list-time">{{ record.recorded_time|date:"H:i" }}</div>
     </td>
     <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
     <td>
@@ -88,31 +88,31 @@
       </div>
     </td>
     <td>
-      <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ record.progress_description|truncatewords:15 }}</div>
+      <div class="track-list-desc">{{ record.progress_description|truncatewords:15 }}</div>
     </td>
     <td>
       {# 计划特有的字段：执行结果 #}
       {% if record.execution_result %}
-      <div style="font-size: 12px; color: #28a745; max-width: 300px;">{{ record.execution_result|truncatewords:10 }}</div>
+      <div class="track-list-result">{{ record.execution_result|truncatewords:10 }}</div>
       {% else %}
-      <span style="color: #999999;">-</span>
+      <span class="track-list-placeholder">-</span>
       {% endif %}
     </td>
     <td>
       {# 计划特有的字段：执行问题 #}
       {% if record.execution_issues %}
-      <div style="font-size: 12px; color: #ffc107; max-width: 300px;">{{ record.execution_issues|truncatewords:10 }}</div>
+      <div class="track-list-issues">{{ record.execution_issues|truncatewords:10 }}</div>
       {% else %}
-      <span style="color: #999999;">-</span>
+      <span class="track-list-placeholder">-</span>
       {% endif %}
     </td>
     <td>
       {% block tracking_record_notes_display %}
       {# 使用基础模板的备注显示逻辑 #}
       {% if record.notes %}
-      <div style="font-size: 12px; color: #999999;">{{ record.notes|truncatewords:10 }}</div>
+      <div class="track-list-muted">{{ record.notes|truncatewords:10 }}</div>
       {% else %}
-      <span style="color: #999999;">-</span>
+      <span class="track-list-placeholder">-</span>
       {% endif %}
       {% endblock %}
     </td>
@@ -151,11 +151,11 @@
             {% for log in status_logs %}
             <tr>
               <td>
-                <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ log.changed_time|date:"Y-m-d" }}</div>
-                <div style="font-size: 12px; color: #999999;">{{ log.changed_time|date:"H:i" }}</div>
+                <div class="track-list-date">{{ log.changed_time|date:"Y-m-d" }}</div>
+                <div class="track-list-time">{{ log.changed_time|date:"H:i" }}</div>
               </td>
               <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="track-list-flex">
                   <span class="list-badge">
                     {% block tracking_status_log_display %}
                     {% if log.old_status %}
@@ -165,7 +165,7 @@
                     {% endif %}
                     {% endblock %}
                   </span>
-                  <span style="color: #999999;">→</span>
+                  <span class="track-list-placeholder">→</span>
                   <span class="list-badge">
                     {% block tracking_status_log_new_display %}
                     {% if log.new_status == 'draft' %}草稿{% else %}{{ log.new_status|tracking_status_display }}{% endif %}
@@ -177,14 +177,14 @@
                 {% if log.changed_by %}
                 {{ log.changed_by.get_full_name|default:log.changed_by.username }}
                 {% else %}
-                <span style="color: #999999;">-</span>
+                <span class="track-list-placeholder">-</span>
                 {% endif %}
               </td>
               <td>
                 {% if log.change_reason %}
-                <div style="font-size: 12px; color: #333333;">{{ log.change_reason|truncatewords:15 }}</div>
+                <div class="track-list-reason">{{ log.change_reason|truncatewords:15 }}</div>
                 {% else %}
-                <span style="color: #999999;">-</span>
+                <span class="track-list-placeholder">-</span>
                 {% endif %}
               </td>
             </tr>
@@ -218,9 +218,9 @@
   {{ block.super }}
 {% endblock %}
 
-{# 添加问题列表区域（计划特有） #}
+{# 添加问题列表区域（计划特有）；引入跟踪组件 CSS（P3 S1 治理） #}
 {% block tracking_custom_styles %}
-  {# 可以在这里添加额外的样式 #}
+  <link rel="stylesheet" href="{% static 'css/components/tracking.css' %}">
 {% endblock %}
 
 {# 在内容末尾添加问题列表 #}
@@ -247,11 +247,11 @@
             {% for issue in issues|slice:":10" %}
             <tr>
               <td>
-                <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ issue.discovered_time|date:"Y-m-d" }}</div>
-                <div style="font-size: 12px; color: #999999;">{{ issue.discovered_time|date:"H:i" }}</div>
+                <div class="track-list-date">{{ issue.discovered_time|date:"Y-m-d" }}</div>
+                <div class="track-list-time">{{ issue.discovered_time|date:"H:i" }}</div>
               </td>
               <td>
-                <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ issue.title|truncatewords:15 }}</div>
+                <div class="track-list-desc">{{ issue.title|truncatewords:15 }}</div>
               </td>
               <td>
                 <span class="list-badge list-badge-{% if issue.severity == 'critical' %}danger{% elif issue.severity == 'high' %}warning{% elif issue.severity == 'medium' %}info{% else %}secondary{% endif %}">
@@ -267,7 +267,7 @@
                 {% if issue.assigned_to %}
                 {{ issue.assigned_to.get_full_name|default:issue.assigned_to.username }}
                 {% else %}
-                <span style="color: #999999;">-</span>
+                <span class="track-list-placeholder">-</span>
                 {% endif %}
               </td>
             </tr>

@@ -1,9 +1,69 @@
 /**
  * 共享 UI 行为层（P2 第11/12条）
  * 列表页基模相关：批量删除、筛选字段配置注入；事件驱动，禁止 setInterval 轮询。
+ * 两栏基模：Bootstrap CDN 回退加载（读 twoColumnLayoutConfig）。
  */
 (function() {
   'use strict';
+
+  function getTwoColumnLayoutConfig() {
+    var el = document.getElementById('twoColumnLayoutConfig');
+    if (!el || !el.textContent) return null;
+    try {
+      return JSON.parse(el.textContent.trim());
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function loadBootstrapResource(type, urls, index) {
+    index = index || 0;
+    if (index >= urls.length) return;
+    var url = urls[index], el;
+    if (type === 'css' || type === 'icons') {
+      el = document.createElement('link');
+      el.rel = 'stylesheet';
+      el.href = url;
+      el.onerror = function() {
+        if (this.parentNode) this.parentNode.removeChild(this);
+        loadBootstrapResource(type, urls, index + 1);
+      };
+      document.head.appendChild(el);
+    } else if (type === 'js') {
+      el = document.createElement('script');
+      el.src = url;
+      el.onerror = function() {
+        if (this.parentNode) this.parentNode.removeChild(this);
+        loadBootstrapResource(type, urls, index + 1);
+      };
+      (document.body || document.head).appendChild(el);
+    }
+  }
+
+  function initTwoColumnLayoutBootstrap() {
+    var config = getTwoColumnLayoutConfig();
+    if (!config) return;
+    var bootstrapCDNs = {
+      css: config.css || [],
+      icons: config.icons || [],
+      js: config.js || []
+    };
+    loadBootstrapResource('css', bootstrapCDNs.css);
+    loadBootstrapResource('icons', bootstrapCDNs.icons);
+    loadBootstrapResource('js', bootstrapCDNs.js);
+    window.loadBootstrapResource = function(type, urls, index) {
+      loadBootstrapResource(type, urls, index);
+    };
+    window.bootstrapCDNs = bootstrapCDNs;
+    if (!window.bootstrap) {
+      setTimeout(function() {
+        var loadResource = window.loadBootstrapResource;
+        if (loadResource && bootstrapCDNs.js && bootstrapCDNs.js.length) {
+          loadResource('js', bootstrapCDNs.js);
+        }
+      }, 2000);
+    }
+  }
 
   function getCsrfToken() {
     var token = document.querySelector('[name=csrfmiddlewaretoken]') && document.querySelector('[name=csrfmiddlewaretoken]').value;
@@ -223,7 +283,13 @@
       }
     }, true);
     document.addEventListener('click', function(e) {
-      if (e.target && (e.target.classList && e.target.classList.contains('row-checkbox') || e.target.id === 'selectAll' || (e.target.closest && (e.target.closest('.row-checkbox') || e.target.closest('#selectAll')))) {
+      var t = e.target;
+      var isRowCheckbox = t && (
+        (t.classList && t.classList.contains('row-checkbox')) ||
+        t.id === 'selectAll' ||
+        (t.closest && (t.closest('.row-checkbox') || t.closest('#selectAll')))
+      );
+      if (isRowCheckbox) {
         setTimeout(onSelectionChange, 100);
       }
     }, true);
@@ -309,6 +375,77 @@
     });
   }
 
+  function previewImage(imageUrl) {
+    if (!imageUrl) return;
+    var modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML =
+      '<div class="modal-dialog modal-lg modal-dialog-centered">' +
+        '<div class="modal-content">' +
+          '<div class="modal-header"><h5 class="modal-title">图片预览</h5>' +
+            '<button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>' +
+          '<div class="modal-body text-center">' +
+            '<img src="' + imageUrl.replace(/"/g, '&quot;') + '" class="img-fluid" alt="预览图片">' +
+          '</div>' +
+          '<div class="modal-footer">' +
+            '<a href="' + imageUrl.replace(/"/g, '&quot;') + '" download class="btn btn-light"><i class="fas fa-download"></i> 下载图片</a>' +
+            '<button type="button" class="btn btn-light" data-bs-dismiss="modal">关闭</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      var bsModal = new bootstrap.Modal(modal);
+      bsModal.show();
+      modal.addEventListener('hidden.bs.modal', function() {
+        if (modal.parentNode) document.body.removeChild(modal);
+      });
+    }
+  }
+
+  function initDetailBase() {
+    var form = document.getElementById('submitApprovalForm');
+    var btn = document.getElementById('submitApprovalBtn');
+    if (form && btn) {
+      form.addEventListener('submit', function(e) {
+        if (!confirm('确定要提交审批吗？提交后需要等待审批通过才能启动计划。')) {
+          e.preventDefault();
+          return false;
+        }
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+      });
+    }
+    document.addEventListener('click', function(e) {
+      var el = e.target && (e.target.closest ? e.target.closest('[data-action="preview-image"]') : null);
+      if (el && el.dataset && el.dataset.imageUrl) {
+        e.preventDefault();
+        previewImage(el.dataset.imageUrl);
+      }
+      el = e.target && (e.target.closest ? e.target.closest('[data-action="open-feedback-modal"]') : null);
+      if (el) {
+        e.preventDefault();
+        try {
+          var modal = document.getElementById('feedbackModal');
+          if (!modal) return;
+          if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            var bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+          } else {
+            setTimeout(function() {
+              if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                var bm = new bootstrap.Modal(modal);
+                bm.show();
+              }
+            }, 500);
+          }
+        } catch (err) {
+          console.warn('打开反馈弹窗时出错：', err);
+        }
+      }
+    }, true);
+  }
+
   function initListPage() {
     var config = getListPageConfig();
     if (!config) return;
@@ -327,6 +464,16 @@
   window.updateBatchDeleteButton = updateBatchDeleteButton;
 
   function run() {
+    try {
+      initTwoColumnLayoutBootstrap();
+    } catch (e) {
+      console.error('[ui.js] two-column bootstrap init error:', e);
+    }
+    try {
+      initDetailBase();
+    } catch (e) {
+      console.error('[ui.js] detail base init error:', e);
+    }
     try {
       initListPage();
     } catch (e) {

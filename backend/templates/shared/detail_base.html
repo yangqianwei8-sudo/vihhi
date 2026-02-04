@@ -227,10 +227,10 @@
         
         {% block detail_status_history_header %}
         <tr class="detail-table-header-row">
-          <th style="width: 60px;">序号</th>
+          <th class="detail-th-w-60">序号</th>
           <th>状态变更</th>
-          <th style="width: 120px;">变更人</th>
-          <th style="width: 160px;">变更时间</th>
+          <th class="detail-th-w-120">变更人</th>
+          <th class="detail-th-w-160">变更时间</th>
           <th>变更依据</th>
           <th>备注</th>
         </tr>
@@ -262,10 +262,10 @@
     <table class="detail-table">
       <thead>
         <tr>
-          <th style="width: 60px;">序号</th>
+          <th class="detail-th-w-60">序号</th>
           <th>类型/名称</th>
           <th>对象/地址</th>
-          <th style="width: 160px;">时间</th>
+          <th class="detail-th-w-160">时间</th>
           <th>说明/描述</th>
           <th>备注</th>
         </tr>
@@ -296,9 +296,9 @@
     <table class="detail-table">
       <thead>
         <tr>
-          <th style="width: 60px;">序号</th>
-          <th style="width: 160px;">时间</th>
-          <th style="width: 120px;">操作人</th>
+          <th class="detail-th-w-60">序号</th>
+          <th class="detail-th-w-160">时间</th>
+          <th class="detail-th-w-120">操作人</th>
           <th>类型/字段</th>
           <th>内容/原值</th>
           <th>新值</th>
@@ -331,16 +331,16 @@
     <table class="detail-table">
       <thead>
         <tr>
-          <th style="width: 60px;">序号</th>
-          <th style="width: 120px;">审批单号</th>
-          <th style="width: 100px;">流程名称</th>
-          <th style="width: 100px;">审批状态</th>
-          <th style="width: 120px;">申请人</th>
-          <th style="width: 120px;">节点名称</th>
-          <th style="width: 120px;">审批人</th>
-          <th style="width: 100px;">审批结果</th>
+          <th class="detail-th-w-60">序号</th>
+          <th class="detail-th-w-120">审批单号</th>
+          <th class="detail-th-w-100">流程名称</th>
+          <th class="detail-th-w-100">审批状态</th>
+          <th class="detail-th-w-120">申请人</th>
+          <th class="detail-th-w-120">节点名称</th>
+          <th class="detail-th-w-120">审批人</th>
+          <th class="detail-th-w-100">审批结果</th>
           <th>申请说明/审批意见</th>
-          <th style="width: 160px;">时间</th>
+          <th class="detail-th-w-160">时间</th>
         </tr>
       </thead>
       <tbody>
@@ -488,7 +488,7 @@
     <table class="detail-table">
       <thead>
         <tr>
-          <th style="width: 150px;">项目</th>
+          <th class="detail-th-w-150">项目</th>
           <th>内容</th>
         </tr>
       </thead>
@@ -498,7 +498,7 @@
         <tr>
           <th>进度百分比</th>
           <td>
-            <div class="detail-progress detail-progress-lg" style="max-width: 300px;">
+            <div class="detail-progress detail-progress-lg detail-progress-lg-max">
               <div class="detail-progress-bar" role="progressbar" 
                    style="width: {{ progress_percentage }}%;" 
                    aria-valuenow="{{ progress_percentage }}" 
@@ -538,7 +538,7 @@
     <table class="detail-table">
       <thead>
         <tr>
-          <th style="width: 150px;">统计项</th>
+          <th class="detail-th-w-150">统计项</th>
           <th>数值</th>
         </tr>
       </thead>
@@ -599,7 +599,7 @@
                 下载
               </a>
               {% if attachment.file_type == 'image' %}
-              <button type="button" class="btn btn-sm btn-light" onclick="previewImage('{{ attachment.file.url }}')">
+              <button type="button" class="btn btn-sm btn-light" data-action="preview-image" data-image-url="{{ attachment.file.url }}">
                 <i class="fas fa-eye"></i>
                 预览
               </button>
@@ -666,22 +666,7 @@
 
 {% block module_extra_js %}
 {{ block.super }}
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('submitApprovalForm');
-    const btn = document.getElementById('submitApprovalBtn');
-    if (form && btn) {
-      form.addEventListener('submit', function(e) {
-        if (!confirm('确定要提交审批吗？提交后需要等待审批通过才能启动计划。')) {
-          e.preventDefault();
-          return false;
-        }
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
-      });
-    }
-  });
-</script>
+<script type="application/json" id="detailBaseConfig">{}</script>
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -702,36 +687,4 @@
     </div>
   </div>
 </div>
-
-<script>
-  function previewImage(imageUrl) {
-    const modal = document.createElement('div');
-    modal.className = 'modal fade';
-    modal.innerHTML = `
-      <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">图片预览</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body text-center">
-            <img src="${imageUrl}" class="img-fluid" alt="预览图片">
-          </div>
-          <div class="modal-footer">
-            <a href="${imageUrl}" download class="btn btn-light">
-              <i class="fas fa-download"></i> 下载图片
-            </a>
-            <button type="button" class="btn btn-light" data-bs-dismiss="modal">关闭</button>
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    const bsModal = new bootstrap.Modal(modal);
-    bsModal.show();
-    modal.addEventListener('hidden.bs.modal', function() {
-      document.body.removeChild(modal);
-    });
-  }
-</script>
 {% endblock module_extra_js %}

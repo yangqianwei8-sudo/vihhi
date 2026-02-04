@@ -44,9 +44,19 @@
   <td>{{ visit_plan.created_by.get_full_name|default:visit_plan.created_by.username }}</td>
   <td>
     <div class="list-page-table-actions">
-      <a href="{% url 'customer_pages:visit_plan_detail' visit_plan.id %}" class="action-view" title="查看">
-        <i class="bi bi-eye"></i>
+      {# 详情：跳转至拜访计划详情页（visit_plan_detail.html 继承 detail_base.html） #}
+      <a href="{% url 'customer_pages:visit_plan_detail' visit_plan.id %}" class="action-view" title="详情">
+        <i class="bi bi-eye"></i><span>详情</span>
       </a>
+      {% if visit_plan.status == 'planned' %}
+      <a href="{% url 'customer_pages:visit_plan_checkin' visit_plan.id %}" class="action-checkin" title="打卡">
+        <i class="bi bi-geo-alt"></i><span>打卡</span>
+      </a>
+      {% elif visit_plan.status == 'in_progress' %}
+      <a href="{% url 'customer_pages:visit_plan_review' visit_plan.id %}" class="action-review" title="复盘">
+        <i class="bi bi-journal-check"></i><span>复盘</span>
+      </a>
+      {% endif %}
     </div>
   </td>
 </tr>

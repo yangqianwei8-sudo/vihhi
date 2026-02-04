@@ -19,6 +19,8 @@ from .common import (
     CustomerFiling,
     CustomerRelationship,
     VisitPlan,
+    VisitCheckin,
+    VisitReview,
     BusinessOpportunity,
     opportunity_can_view,
     opportunity_can_view_all,
@@ -484,14 +486,14 @@ def customer_create(request):
 
 @login_required
 def customer_lead_list(request):
-    """线索列表（基模关键词 + 线索来源/负责人/跟进状态筛选）"""
+    """新建线索（基模关键词 + 线索来源/负责人/跟进状态筛选）"""
     from django.core.paginator import Paginator
     from django.contrib.auth import get_user_model
     User = get_user_model()
 
     permission_set = get_user_permission_codes(request.user)
     if not _check_customer_permission('customer_management.client.view', permission_set):
-        messages.error(request, '您没有权限查看线索列表')
+        messages.error(request, '您没有权限查看新建线索')
         return redirect('customer_pages:customer_management_home')
 
     can_create = _check_customer_permission('customer_management.client.create', permission_set)
@@ -524,7 +526,7 @@ def customer_lead_list(request):
     users = User.objects.filter(is_active=True).order_by('username')
 
     context = _context(
-        "线索列表",
+        "新建线索",
         "📋",
         "查看和管理所有客户线索",
         request=request,
@@ -533,7 +535,7 @@ def customer_lead_list(request):
         permission_set, request.path, active_id='customer_lead_list'
     )
     context.update({
-        'page_title': '线索列表',
+        'page_title': '新建线索',
         'can_create': can_create,
         'search': search,
         'lead_source': lead_source,

@@ -127,6 +127,21 @@
     cursor: not-allowed;
     background-color: #fff;
 }
+
+/* P3 S1 D-01 治理：inline style 抽 class */
+.delivery-list-mb-8 { margin-bottom: 8px !important; }
+.delivery-list-filter-hidden { display: none; }
+.delivery-list-w-250 { width: 250px; }
+.delivery-list-w-200 { width: 200px; }
+.delivery-list-w-150 { width: 150px; }
+.delivery-list-count-color { color: #ff6b35; }
+.delivery-list-input-group-auto { width: auto; }
+.delivery-list-search-input { width: 250px; font-size: 12px; }
+.delivery-list-btn-sm-font { font-size: 12px; }
+.delivery-list-form-hidden { display: none; }
+.delivery-list-truncate-200 { max-width: 200px; }
+.delivery-list-footer-bar { padding: 8px 12px; background: #fff; border-radius: 4px; margin-top: 8px; }
+.delivery-list-empty-icon { font-size: 3rem; color: var(--vh-text-muted); }
 </style>
 {% endblock %}
 
@@ -134,7 +149,7 @@
 
     <div class="list-page-container">
 
-        <ul class="nav nav-tabs mb-1 border-bottom" role="tablist" style="margin-bottom: 8px !important;">
+        <ul class="nav nav-tabs mb-1 border-bottom delivery-list-mb-8" role="tablist">
             <li class="nav-item" role="presentation">
                 <a class="nav-link {% if tab == 'all' or not tab %}active{% endif %} border-0" href="?tab=all{% if status_filter %}&status={{ status_filter }}{% endif %}{% if method_filter %}&delivery_method={{ method_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if project_filter %}&project_id={{ project_filter }}{% endif %}{% if client_filter %}&client_id={{ client_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
                     全部
@@ -162,7 +177,7 @@
             </li>
         </ul>
 
-        <div class="list-page-filters mb-1" style="margin-bottom: 8px !important;">
+        <div class="list-page-filters mb-1 delivery-list-mb-8">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h6 class="mb-0 small fw-semibold">筛选条件</h6>
                 <div class="d-flex gap-2">
@@ -176,7 +191,7 @@
 
                 {% if tab %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
                 {% if search_query %}<input type="hidden" name="search" value="{{ search_query }}">{% endif %}
-                <div id="basicFilters" style="display: none;">
+                <div id="basicFilters" class="delivery-list-filter-hidden">
 
                     <div class="filter-row mb-3" data-filter-key="status">
                         <label class="filter-label">交付状态:</label>
@@ -234,7 +249,7 @@
                                 全部项目
                             </button>
                             <div class="d-inline-flex align-items-center ms-2">
-                                <select name="project_id" class="form-select form-select-sm" style="width: 250px;" id="projectSelect">
+                                <select name="project_id" class="form-select form-select-sm delivery-list-w-250" id="projectSelect">
                                     <option value="">请选择项目</option>
                                     {% for project in projects %}
                                     <option value="{{ project.id }}" {% if project_filter == project.id|stringformat:"s" %}selected{% endif %}>
@@ -254,7 +269,7 @@
                                 全部客户
                             </button>
                             <div class="d-inline-flex align-items-center ms-2">
-                                <select name="client_id" class="form-select form-select-sm" style="width: 200px;" id="clientSelect">
+                                <select name="client_id" class="form-select form-select-sm delivery-list-w-200" id="clientSelect">
                                     <option value="">请选择客户</option>
                                     {% for client in clients %}
                                     <option value="{{ client.id }}" {% if client_filter == client.id|stringformat:"s" %}selected{% endif %}>
@@ -272,10 +287,10 @@
                         <div class="filter-buttons">
                             <div class="d-inline-flex align-items-center gap-2">
                                 <input type="date" name="created_date_from" class="form-control form-control-sm"
-                                       value="{{ created_date_from }}" style="width: 150px;">
+                                       value="{{ created_date_from }}" class="delivery-list-w-150">
                                 <span>~</span>
                                 <input type="date" name="created_date_to" class="form-control form-control-sm"
-                                       value="{{ created_date_to }}" style="width: 150px;">
+                                       value="{{ created_date_to }}" class="delivery-list-w-150">
                             </div>
                         </div>
                     </div>
@@ -285,10 +300,10 @@
                         <div class="filter-buttons">
                             <div class="d-inline-flex align-items-center gap-2">
                                 <input type="date" name="scheduled_date_from" class="form-control form-control-sm"
-                                       value="{{ scheduled_date_from }}" style="width: 150px;">
+                                       value="{{ scheduled_date_from }}" class="delivery-list-w-150">
                                 <span>~</span>
                                 <input type="date" name="scheduled_date_to" class="form-control form-control-sm"
-                                       value="{{ scheduled_date_to }}" style="width: 150px;">
+                                       value="{{ scheduled_date_to }}" class="delivery-list-w-150">
                             </div>
                         </div>
                     </div>
@@ -296,11 +311,11 @@
             </form>
         </div>
 
-        <div class="list-page-action-bar mb-1 d-flex justify-content-between align-items-center" style="margin-bottom: 8px !important;">
+        <div class="list-page-action-bar mb-1 d-flex justify-content-between align-items-center delivery-list-mb-8">
 
             <div class="d-flex align-items-center gap-3">
-                <span class="text-muted small">已选 <strong id="selectedCount" style="color: #ff6b35;">0</strong> 个</span>
-                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="clearSelection" style="display: none;">
+                <span class="text-muted small">已选 <strong id="selectedCount" class="delivery-list-count-color">0</strong> 个</span>
+                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none delivery-list-form-hidden" id="clearSelection">
                     清除所选
                 </button>
                 <div class="d-flex align-items-center gap-1">
@@ -311,12 +326,12 @@
 
             <div class="d-flex align-items-center gap-2">
 
-                <div class="input-group input-group-sm" style="width: auto;">
-                    <input type="text" class="form-control form-control-sm" id="searchInput" name="search" placeholder="交付单号、标题、收件人..." value="{{ search_query }}" style="width: 250px; font-size: 12px;" onkeypress="if(event.key==='Enter') document.getElementById('searchForm').submit();">
-                    <button class="btn btn-outline-secondary btn-sm" type="submit" form="searchForm" style="font-size: 12px;">
+                <div class="input-group input-group-sm delivery-list-input-group-auto">
+                    <input type="text" class="form-control form-control-sm delivery-list-search-input" id="searchInput" name="search" placeholder="交付单号、标题、收件人..." value="{{ search_query }}">
+                    <button class="btn btn-outline-secondary btn-sm delivery-list-btn-sm-font" type="submit" form="searchForm">
                         <i class="bi bi-search"></i> Q
                     </button>
-                    <button class="btn btn-outline-secondary btn-sm" type="button" onclick="location.reload()" style="font-size: 12px;">
+                    <button class="btn btn-outline-secondary btn-sm delivery-list-btn-sm-font" type="button" data-action="delivery-list-reload">
                         <i class="bi bi-arrow-clockwise"></i> C
                     </button>
                 </div>
@@ -327,7 +342,7 @@
             </div>
         </div>
 
-        <form method="get" id="searchForm" style="display: none;">
+        <form method="get" id="searchForm" class="delivery-list-form-hidden">
             {% if tab %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
             {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
             {% if method_filter %}<input type="hidden" name="delivery_method" value="{{ method_filter }}">{% endif %}
@@ -340,7 +355,7 @@
             {% if scheduled_date_to %}<input type="hidden" name="scheduled_date_to" value="{{ scheduled_date_to }}">{% endif %}
         </form>
 
-        <div class="row mb-2" style="margin-bottom: 8px !important;">
+        <div class="row mb-2 delivery-list-mb-8">
             <div class="col-md-3">
             </div>
             <div class="col-md-3">
@@ -384,7 +399,7 @@
                                 </a>
                             </td>
                             <td>
-                                <div class="text-truncate" style="max-width: 200px;" title="{{ delivery.title }}">
+                                <div class="text-truncate delivery-list-truncate-200" title="{{ delivery.title }}">
                                     {{ delivery.title }}
                                 </div>
                             </td>
@@ -462,7 +477,7 @@
             </div>
 
             {% if deliveries.has_other_pages %}
-            <div class="d-flex justify-content-between align-items-center" style="padding: 8px 12px; background: #fff; border-radius: 4px; margin-top: 8px;">
+            <div class="d-flex justify-content-between align-items-center delivery-list-footer-bar">
                 <div class="text-muted small">
                     共 <strong>{{ deliveries.paginator.count }}</strong> 条
                 </div>
@@ -514,7 +529,7 @@
             {% else %}
             <div class="list-page-empty">
                 <div class="list-page-empty-icon">
-                    <i class="bi bi-inbox" style="font-size: 3rem; color: var(--vh-text-muted);"></i>
+                    <i class="bi bi-inbox delivery-list-empty-icon"></i>
                 </div>
                 <div class="list-page-empty-title">暂无交付记录</div>
                 <div class="list-page-empty-text">您还没有创建任何交付记录</div>
@@ -529,128 +544,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-// 筛选按钮点击事件
-document.addEventListener('DOMContentLoaded', function() {
-    // 筛选按钮点击
-    document.querySelectorAll('.filter-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const filterKey = this.getAttribute('data-filter');
-            const filterValue = this.getAttribute('data-value');
-            const hiddenInput = document.getElementById('filter_' + filterKey);
-
-            // 更新隐藏输入框的值
-            if (hiddenInput) {
-                hiddenInput.value = filterValue;
-            }
-
-            // 更新按钮状态
-            const filterRow = this.closest('.filter-row');
-            filterRow.querySelectorAll('.filter-btn').forEach(function(b) {
-                b.classList.remove('active');
-            });
-            this.classList.add('active');
-
-            // 提交表单
-            document.getElementById('filterForm').submit();
-        });
-    });
-
-    // 下拉框变化时提交表单
-    document.getElementById('projectSelect')?.addEventListener('change', function() {
-        document.getElementById('filter_project_id').value = this.value;
-        document.getElementById('filterForm').submit();
-    });
-
-    document.getElementById('clientSelect')?.addEventListener('change', function() {
-        document.getElementById('filter_client_id').value = this.value;
-        document.getElementById('filterForm').submit();
-    });
-
-    // 筛选栏折叠/展开
-    const toggleFilterBtn = document.getElementById('toggleFilterCollapse');
-    const basicFilters = document.getElementById('basicFilters');
-    const filterCollapseText = document.getElementById('filterCollapseText');
-    const filterCollapseIcon = document.getElementById('filterCollapseIcon');
-
-    if (toggleFilterBtn && basicFilters) {
-        toggleFilterBtn.addEventListener('click', function() {
-            if (basicFilters.style.display === 'none') {
-                basicFilters.style.display = 'block';
-                filterCollapseText.textContent = '收起';
-                filterCollapseIcon.textContent = '▲';
-            } else {
-                basicFilters.style.display = 'none';
-                filterCollapseText.textContent = '展开';
-                filterCollapseIcon.textContent = '▼';
-            }
-        });
-    }
-
-    // 全选/取消全选
-    const selectAll = document.getElementById('selectAll');
-    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-
-    if (selectAll) {
-        selectAll.addEventListener('change', function() {
-            rowCheckboxes.forEach(function(checkbox) {
-                checkbox.checked = this.checked;
-            }, this);
-            updateSelectedCount();
-        });
-    }
-
-    // 行复选框变化
-    rowCheckboxes.forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            updateSelectedCount();
-            updateSelectAllState();
-        });
-    });
-
-    // 更新选中数量
-    function updateSelectedCount() {
-        const selectedCount = document.querySelectorAll('.row-checkbox:checked').length;
-        const countElement = document.getElementById('selectedCount');
-        const clearSelectionBtn = document.getElementById('clearSelection');
-        const batchBtns = document.querySelectorAll('#batchExportBtn, #batchDeleteBtn');
-
-        if (countElement) {
-            countElement.textContent = selectedCount;
-        }
-
-        if (clearSelectionBtn) {
-            clearSelectionBtn.style.display = selectedCount > 0 ? 'block' : 'none';
-        }
-
-        batchBtns.forEach(function(btn) {
-            btn.disabled = selectedCount === 0;
-        });
-    }
-
-    // 更新全选状态
-    function updateSelectAllState() {
-        const allChecked = rowCheckboxes.length > 0 && Array.from(rowCheckboxes).every(function(cb) {
-            return cb.checked;
-        });
-        if (selectAll) {
-            selectAll.checked = allChecked;
-        }
-    }
-
-    // 清除选择
-    const clearSelectionBtn = document.getElementById('clearSelection');
-    if (clearSelectionBtn) {
-        clearSelectionBtn.addEventListener('click', function() {
-            rowCheckboxes.forEach(function(checkbox) {
-                checkbox.checked = false;
-            });
-            if (selectAll) {
-                selectAll.checked = false;
-            }
-            updateSelectedCount();
-        });
-    }
-});
-</script>
+<script src="{% static 'js/delivery/delivery-list.js' %}"></script>
 {% endblock %}

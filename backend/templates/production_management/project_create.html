@@ -76,6 +76,7 @@
     .project-create .btn-outline-primary{border-radius:12px; padding:8px 14px;}
     /* 小提示样式 */
     .form-text.text-muted{font-size:12px;color:#6b7280 !important}
+    .project-year-input{max-width:90px;}
     /* 段落小标题强调条 */
     .step-card .card-header h5{
         position:relative;padding-left:10px;margin:0;
@@ -143,12 +144,12 @@
         <div class="project-create__layout">
             <div class="project-create__main">
 
-                <div style="display:none">
+                <div class="d-none">
                     <div class="stepper__status">
                         <span id="lastSaved"></span>
                     </div>
                     <div class="stepper__progress">
-                        <div class="stepper__progress-bar" id="stepProgress" style="width:25%"></div>
+                        <div class="stepper__progress-bar" id="stepProgress"></div>
                     </div>
                     <div>
                         <button type="button" class="stepper__step stepper__step--active" data-step="0"></button>
@@ -169,11 +170,11 @@
                                     <div class="input-group project-code-group">
                                         <span class="input-group-text">VIH</span>
                                         <span class="input-group-text">-</span>
-                                        <input type="text" class="form-control" id="projectYear" value="{{ current_year }}" readonly style="max-width:90px;">
+                                        <input type="text" class="form-control project-year-input" id="projectYear" value="{{ current_year }}" readonly>
                                         <span class="input-group-text">-</span>
                                         <input type="text" name="project_number_seq" id="projectNumberSeq" class="form-control" placeholder="001" maxlength="3" pattern="[0-9]{3}" readonly value="{{ form_data.project_number_seq|default:'' }}">
                                         <button type="button" class="btn btn-outline-secondary" id="toggleProjectSeq"><i class="bi bi-pencil-square"></i></button>
-                                        <button type="button" class="btn btn-outline-primary" onclick="autoGenerateSeq()"><i class="bi bi-magic"></i> 自动生成</button>
+                                        <button type="button" class="btn btn-outline-primary" data-action="project-create-auto-generate-seq"><i class="bi bi-magic"></i> 自动生成</button>
                                     </div>
                                     <small class="text-muted">格式：VIH-年份-序号，序号可手动编辑，支持唯一性校验。</small>
                                 </div>
@@ -289,468 +290,24 @@
 
         <div class="project-create__footer">
             <div class="project-create__footer-left">
-                <button type="button" class="btn btn-light" onclick="history.back()">取消创建</button>
-                <button type="button" class="btn btn-outline-secondary" onclick="saveDraft()"><i class="bi bi-save"></i> 保存草稿</button>
+                <button type="button" class="btn btn-light" data-action="project-create-cancel">取消创建</button>
+                <button type="button" class="btn btn-outline-secondary" data-action="project-create-save-draft"><i class="bi bi-save"></i> 保存草稿</button>
             </div>
             <div class="project-create__footer-right">
-                <button type="button" class="btn btn-outline-primary" id="prevStepBtn" disabled style="display:none">上一步</button>
-                <button type="button" class="btn btn-primary" id="nextStepBtn" style="display:none">下一步</button>
-                <button type="button" class="btn btn-success" id="submitBtn" onclick="submitForm()"><i class="bi bi-check-circle"></i> 提交申请</button>
+                <button type="button" class="btn btn-outline-primary" id="prevStepBtn" disabled hidden>上一步</button>
+                <button type="button" class="btn btn-primary" id="nextStepBtn" hidden>下一步</button>
+                <button type="button" class="btn btn-success" id="submitBtn" data-action="project-create-submit" hidden><i class="bi bi-check-circle"></i> 提交申请</button>
             </div>
         </div>
 
-        <button type="button" class="btn btn-success floating-submit" onclick="submitForm()">
+        <button type="button" class="btn btn-success floating-submit" data-action="project-create-submit">
             <i class="bi bi-check-circle"></i> 提交申请
         </button>
     </form>
 </div>
 
-<script>
-const DRAFT_STORAGE_KEY = 'vihhi_project_create_draft';
-const professionOptions = {{ service_professions_map_json|default:"{}" }};
-let preselectedProfessionIds = new Set({{ selected_profession_ids_json|default:"[]" }});
-
-const steps = Array.from(document.querySelectorAll('[data-step-content]'));
-const stepButtons = Array.from(document.querySelectorAll('.stepper__step'));
-const projectForm = document.getElementById('projectForm');
-const projectYearInput = document.getElementById('projectYear');
-const projectNumberSeq = document.getElementById('projectNumberSeq');
-const projectNumberHint = document.getElementById('projectNumberHint');
-const serviceTypeSelect = document.getElementById('serviceTypeSelect');
-const subsidiarySelect = document.getElementById('subsidiarySelect');
-const contractAmountInput = document.getElementById('contractAmountInput');
-const contractDateInput = document.getElementById('contractDateInput');
-const contractFileInput = document.getElementById('contractFileInput');
-const uploadProgress = document.getElementById('uploadProgress');
-const uploadProgressBar = document.getElementById('uploadProgressBar');
-const uploadProgressText = document.getElementById('uploadProgressText');
-const validationList = document.getElementById('validationList');
-const historyList = document.getElementById('historyList');
-const lastSavedLabel = document.getElementById('lastSaved');
-const nameInput = document.getElementById('projectNameInput');
-const aliasInput = document.getElementById('projectAliasInput');
-let currentStep = 0;
-let autoSaveTimer = null;
-
-function updateStep(newStep){
-    if(newStep < 0 || newStep >= steps.length) return;
-    steps[currentStep].hidden = true;
-    stepButtons[currentStep].classList.remove('stepper__step--active');
-
-    currentStep = newStep;
-    steps[currentStep].hidden = false;
-    stepButtons[currentStep].classList.add('stepper__step--active');
-    document.getElementById('prevStepBtn').disabled = currentStep === 0;
-    document.getElementById('nextStepBtn').hidden = currentStep === steps.length -1;
-    document.getElementById('submitBtn').hidden = currentStep !== steps.length -1;
-    document.getElementById('stepProgress').style.width = ((currentStep+1)/steps.length*100)+'%';
-}
-
-stepButtons.forEach(btn => btn.addEventListener('click', () => updateStep(parseInt(btn.dataset.step,10))));
-document.getElementById('nextStepBtn').addEventListener('click', () => updateStep(currentStep+1));
-document.getElementById('prevStepBtn').addEventListener('click', () => updateStep(currentStep-1));
-
-const toggleProjectSeq = document.getElementById('toggleProjectSeq');
-if(toggleProjectSeq){
-    toggleProjectSeq.addEventListener('click', () => {
-        const isReadOnly = projectNumberSeq.hasAttribute('readonly');
-        if(isReadOnly){
-            projectNumberSeq.removeAttribute('readonly');
-            projectNumberSeq.focus();
-            toggleProjectSeq.innerHTML = '<i class="bi bi-check"></i>';
-        }else{
-            projectNumberSeq.setAttribute('readonly','readonly');
-            toggleProjectSeq.innerHTML = '<i class="bi bi-pencil-square"></i>';
-            checkProjectNumber();
-        }
-    });
-}
-
-function buildProjectNumber(){
-    const seq = (projectNumberSeq.value || '001').trim().padStart(3,'0');
-    return `VIH-${projectYearInput.value}-${seq}`;
-}
-
-function autoGenerateSeq(){
-    const year = projectYearInput.value;
-    const url = new URL('/api/project/api/projects/get_next_number/', window.location.origin);
-    url.searchParams.set('year', year);
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            const seq = data.next_seq ? data.next_seq.toString().padStart(3,'0') : '001';
-            projectNumberSeq.value = seq;
-            projectNumberSeq.setAttribute('readonly','readonly');
-            toggleProjectSeq.innerHTML = '<i class="bi bi-pencil-square"></i>';
-            checkProjectNumber();
-        })
-        .catch(() => {
-            projectNumberSeq.value = '001';
-            projectNumberHint.textContent = '获取编号失败，请稍后重试';
-            projectNumberHint.className = 'form-text text-danger';
-        });
-}
-
-function checkProjectNumber(){
-    const number = buildProjectNumber();
-    const regex = /^VIH-\d{4}-\d{3}$/;
-    if(!regex.test(number)){
-        projectNumberHint.textContent = '项目编号格式应为 VIH-YYYY-NNN';
-        projectNumberHint.className = 'form-text text-danger';
-        updateValidationState('project_number', false);
-        return;
-    }
-    const url = new URL('/api/project/api/projects/check_project_number/', window.location.origin);
-    url.searchParams.set('project_number', number);
-    fetch(url)
-        .then(res => res.json())
-        .then(data => {
-            if(data.valid){
-                projectNumberHint.textContent = '项目编号可用';
-                projectNumberHint.className = 'form-text text-success';
-                updateValidationState('project_number', true);
-            }else{
-                projectNumberHint.textContent = '项目编号已存在，请重新生成';
-                projectNumberHint.className = 'form-text text-danger';
-                updateValidationState('project_number', false);
-            }
-        })
-        .catch(() => {
-            projectNumberHint.textContent = '无法验证项目编号，请稍后再试';
-            projectNumberHint.className = 'form-text text-warning';
-            updateValidationState('project_number', false);
-        });
-}
-
-function updateProfessionOptions(serviceTypeId){
-    const container = document.getElementById('professionList');
-    // 兼容：professionOptions 键可能是字符串或数字
-    const keyStr = String(serviceTypeId);
-    const keyNum = Number.isFinite(parseInt(serviceTypeId, 10)) ? parseInt(serviceTypeId, 10) : null;
-    let options = professionOptions[keyStr] || (keyNum !== null ? professionOptions[keyNum] : []) || [];
-
-    // 根据服务类型代码限定“服务专业”候选
-    const code = serviceTypeSelect?.selectedOptions?.[0]?.dataset?.code || '';
-    const allowMap = {
-        result_optimization: ['结构','构造','地库减面积','地库加车位','停车效率','节能','门窗栏杆','幕墙','总坪景观','电气','给排水','暖通','市政道路'],
-        process_optimization: ['结构','停车效率'],
-        detailed_review: ['建筑','结构','电气','给排水','暖通'],
-        process_consulting: ['建筑','结构','电气','给排水','暖通'],
-        full_process_consulting: ['建筑','结构','电气','给排水','暖通'],
-    };
-    const allowList = allowMap[code];
-    if (Array.isArray(allowList) && allowList.length) {
-        options = options.filter(p => allowList.includes(p.name));
-    }
-    container.innerHTML = '';
-
-    options.forEach(prof => {
-        const label = document.createElement('label');
-        label.className = 'profession-item';
-        label.title = prof.description || '专业服务';
-        label.innerHTML = `<input type="checkbox" name="service_profession_ids[]" value="${prof.id}"><span>${prof.name}</span>`;
-        const input = label.querySelector('input');
-        input.addEventListener('change', updateProfessionSummary);
-        if(preselectedProfessionIds.has(prof.id)){
-            input.checked = true;
-        }
-        container.appendChild(label);
-    });
-    updateProfessionSummary();
-}
-
-function updateProfessionSummary(){
-    const selected = document.querySelectorAll('input[name="service_profession_ids[]"]:checked');
-    document.getElementById('professionSummary').textContent = `已选择 ${selected.length} 项专业`;
-    updateValidationState('service_professions', selected.length > 0);
-}
-
-const businessSelect = document.getElementById('businessTypeSelect');
-const businessOther = document.getElementById('businessTypeOther');
-if(businessSelect){
-    businessSelect.addEventListener('change', () => {
-        const isOther = businessSelect.value === 'other';
-        businessOther.hidden = !isOther;
-        if(!isOther){
-            businessOther.value = '';
-        }
-        updateValidationState('business_type', !!businessSelect.value);
-    });
-    updateValidationState('business_type', !!businessSelect.value);
-    if(businessSelect.value === 'other'){
-        businessOther.hidden = false;
-    }
-}
-
-function saveDraft(){
-    document.getElementById('formAction').value = 'draft';
-    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(serializeForm()));
-    updateHistory('手动保存草稿');
-    if(lastSavedLabel){
-        lastSavedLabel.textContent = '最后保存：' + new Date().toLocaleString();
-    }
-    projectForm.submit();
-}
-
-function loadDraft(){
-    if(!restoreDraft()){
-        alert('当前没有可恢复的草稿');
-    }
-}
-
-function submitForm(){
-    if(!serviceTypeSelect || !serviceTypeSelect.value){
-        alert('请选择服务类型');
-        updateValidationState('service_type', false);
-        return;
-    }
-    if(document.querySelectorAll('input[name="service_profession_ids[]"]:checked').length === 0){
-        alert('请选择至少一个服务专业');
-        updateValidationState('service_professions', false);
-        return;
-    }
-    checkProjectNumber();
-    document.getElementById('formAction').value = 'submit';
-    localStorage.removeItem(DRAFT_STORAGE_KEY);
-    projectForm.submit();
-}
-
-function updateValidationState(field, valid){
-    const item = validationList?.querySelector(`[data-field="${field}"] span`);
-    if(!item) return;
-    if(valid){
-        item.className = 'badge bg-success';
-        item.textContent = '已完成';
-    }else{
-        item.className = 'badge bg-danger';
-        item.textContent = '待填写';
-    }
-}
-
-function updateHistory(action){
-    if(!historyList) return;
-    const entry = document.createElement('div');
-    entry.className = 'small text-muted';
-    entry.textContent = `${new Date().toLocaleString()} · ${action}`;
-    historyList.prepend(entry);
-}
-
-function serializeForm(){
-    const formData = new FormData(projectForm);
-    const data = {};
-    formData.forEach((value, key) => {
-        if(data[key]){
-            if(!Array.isArray(data[key])) data[key] = [data[key]];
-            data[key].push(value);
-        }else{
-            data[key] = value;
-        }
-    });
-    data.project_number = buildProjectNumber();
-    return data;
-}
-
-function populateForm(data){
-    Object.keys(data).forEach(key => {
-        if(key === 'project_number'){
-            const parts = data[key].split('-');
-            if(parts.length === 3){
-                projectYearInput.value = parts[1];
-                projectNumberSeq.value = parts[2];
-            }
-            return;
-        }
-        const value = data[key];
-        if(Array.isArray(value)){
-            const inputs = projectForm.querySelectorAll(`[name="${key}"]`);
-            inputs.forEach(input => {
-                if(input.type === 'checkbox' || input.type === 'radio'){
-                    input.checked = value.includes(input.value);
-                }
-            });
-        }else{
-            const input = projectForm.querySelector(`[name="${key}"]`);
-            if(input){
-                input.value = value;
-            }
-        }
-    });
-}
-
-function restoreDraft(){
-    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
-    if(!raw) return false;
-    try {
-        const data = JSON.parse(raw);
-        populateForm(data);
-        if(data['service_profession_ids[]']){
-            const values = Array.isArray(data['service_profession_ids[]']) ? data['service_profession_ids[]'] : [data['service_profession_ids[]']];
-            preselectedProfessionIds = new Set(values.filter(Boolean).map(v => parseInt(v, 10)).filter(Number.isFinite));
-        }
-        updateProfessionOptions(document.querySelector('input[name="service_type"]:checked')?.value || document.querySelector('input[name="service_type"]').value);
-        updateHistory('已恢复草稿');
-        if(lastSavedLabel){
-            lastSavedLabel.textContent = '最后保存：' + new Date().toLocaleString();
-        }
-        return true;
-    } catch (e) {
-        console.warn('无法恢复草稿', e);
-        return false;
-    }
-}
-
-function scheduleAutoSave(){
-    clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => {
-        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(serializeForm()));
-        updateHistory('自动保存草稿');
-        if(lastSavedLabel){
-            lastSavedLabel.textContent = '最后保存：' + new Date().toLocaleString();
-        }
-    }, 1000);
-}
-
-function handleFormChange(e){
-    const { name } = e.target;
-    if(name === 'service_type'){
-        preselectedProfessionIds = new Set(Array.from(document.querySelectorAll('input[name="service_profession_ids[]"]:checked')).map(el => parseInt(el.value,10)));
-        updateValidationState('service_type', true);
-        updateProfessionOptions(e.target.value);
-    }
-    if(name === 'business_type'){
-        updateValidationState('business_type', !!businessSelect.value);
-    }
-    if(name === 'service_profession_ids[]'){
-        updateProfessionSummary();
-    }
-    if(name === 'subsidiary'){
-        updateValidationState('subsidiary', !!subsidiarySelect.value);
-        autoGenerateSeq();
-    }
-    if(name === 'project_number_seq'){
-        checkProjectNumber();
-    }
-    scheduleAutoSave();
-}
-
-projectForm.addEventListener('input', handleFormChange, {capture:true});
-projectForm.addEventListener('change', handleFormChange, {capture:true});
-projectForm.addEventListener('submit', () => localStorage.removeItem(DRAFT_STORAGE_KEY));
-
-// 初始化：根据默认选中的服务类型渲染“服务专业”
-(function initProfessionByServiceType(){
-    if(serviceTypeSelect){
-        updateProfessionOptions(serviceTypeSelect.value);
-        serviceTypeSelect.addEventListener('change', (e)=> updateProfessionOptions(e.target.value));
-    }
-})();
-
-if(contractFileInput && uploadProgress && uploadProgressBar && uploadProgressText){
-    const resetUploadProgress = () => {
-        uploadProgressBar.style.width = '0%';
-        uploadProgressBar.setAttribute('aria-valuenow', 0);
-        uploadProgressBar.textContent = '0%';
-        uploadProgressText.textContent = '等待选择文件';
-        uploadProgress.hidden = true;
-    };
-
-    resetUploadProgress();
-
-    contractFileInput.addEventListener('change', () => {
-        const file = contractFileInput.files && contractFileInput.files[0];
-        if(!file){
-            resetUploadProgress();
-            return;
-        }
-        uploadProgress.hidden = false;
-        uploadProgressBar.style.width = '0%';
-        uploadProgressBar.setAttribute('aria-valuenow', 0);
-        uploadProgressBar.textContent = '0%';
-        uploadProgressText.textContent = `${file.name} · ${(file.size / (1024 * 1024)).toFixed(2)} MB`;
-
-        const reader = new FileReader();
-        reader.onloadstart = () => {
-            uploadProgressBar.style.width = '0%';
-            uploadProgressBar.textContent = '0%';
-        };
-        reader.onprogress = (event) => {
-            if(event.lengthComputable){
-                const percent = Math.round((event.loaded / event.total) * 100);
-                uploadProgressBar.style.width = `${percent}%`;
-                uploadProgressBar.setAttribute('aria-valuenow', percent);
-                uploadProgressBar.textContent = `${percent}%`;
-            }
-        };
-        reader.onloadend = () => {
-            uploadProgressBar.style.width = '100%';
-            uploadProgressBar.setAttribute('aria-valuenow', 100);
-            uploadProgressBar.textContent = '100%';
-            uploadProgressText.textContent = `${file.name} 上传准备完成`;
-        };
-        reader.onerror = () => {
-            uploadProgressText.textContent = '读取文件失败，请重新选择';
-        };
-        reader.readAsArrayBuffer(file);
-    });
-
-    projectForm.addEventListener('submit', () => {
-        if(!uploadProgress.hidden){
-            uploadProgressText.textContent = '正在上传，请稍候...';
-        }
-    });
-}
-
-const contractAmountRawKey = 'datasetRaw';
-if(contractAmountInput){
-    contractAmountInput.dataset.raw = contractAmountInput.value.replace(/[^\d.]/g,'');
-    contractAmountInput.addEventListener('input', (e) => {
-        const cleaned = e.target.value.replace(/[^\d.]/g,'');
-        e.target.dataset.raw = cleaned;
-    });
-    contractAmountInput.addEventListener('blur', () => {
-        const amount = getContractAmount();
-        contractAmountInput.value = amount ? amount.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}) : '';
-    });
-    contractAmountInput.addEventListener('focus', () => {
-        contractAmountInput.value = contractAmountInput.dataset.raw || '';
-    });
-}
-
-if(contractDateInput){
-    contractDateInput.addEventListener('change', () => {
-        updateHistory('更新签约日期');
-    });
-}
-
-if(subsidiarySelect){
-    updateValidationState('subsidiary', !!subsidiarySelect.value);
-}
-
-if(serviceTypeSelect){
-    updateValidationState('service_type', !!serviceTypeSelect.value);
-}
-
-if(nameInput){
-    nameInput.addEventListener('input', () => {
-        const text = nameInput.value.trim();
-        document.getElementById('nameCount').textContent = text.length;
-        updateValidationState('name', text.length > 0);
-        if(aliasInput && !aliasInput.value){
-            aliasInput.placeholder = text ? `${text.slice(0,10)} 项目` : '如：天府商业综合体';
-        }
-    });
-    updateValidationState('name', !!nameInput.value.trim());
-    document.getElementById('nameCount').textContent = nameInput.value.trim().length;
-}
-
-updateProfessionSummary();
-updateStep(0);
-const restored = restoreDraft();
-if(!projectNumberSeq.value){
-    autoGenerateSeq();
-}
-if(serviceTypeSelect){ updateProfessionOptions(serviceTypeSelect.value); }
-</script>
+<script type="application/json" id="projectCreateConfig">{"serviceProfessionsMap": {{ service_professions_map_json|default:"{}" }}, "selectedProfessionIds": {{ selected_profession_ids_json|default:"[]" }} }</script>
+<script src="{% static 'js/production/project-form.js' %}"></script>
 
 <style>
 :root{--primary:var(--vh-primary);--primary-light:var(--vh-primary-light);--accent:var(--vh-accent);--muted:var(--vh-muted);}
