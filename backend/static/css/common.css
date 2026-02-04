@@ -2,22 +2,29 @@
  * 维海科技信息化管理平台 - 统一样式文件（主入口）
  * 用于保持整个系统的设计风格一致性
  * 版本: 3.0
- * 
+ *
  * 更新日志：
  * - v3.0: 重构为模块化架构，使用@import导入分类管理的样式文件
  * - v2.1: 优化视觉效果，增强响应式设计，新增动画效果和加载状态组件
  * - v2.0: 统一样式模板，迁移内联样式
- * 
+ *
  * 文件结构：
  * - core/         核心基础样式（必须加载）
  * - components/   通用组件样式（按需加载）
  * - layouts/      布局样式
  * - modules/      模块特定样式（按需加载）
- * 
+ *
  * 使用说明：
  * 1. 基础使用：直接引入此文件即可加载所有核心样式和通用组件
  * 2. 按需加载：可以在模板中单独引入特定模块的样式文件
  * 3. 自定义：可以注释掉不需要的组件导入以减小文件大小
+ *
+ * ---------------------------------------------------------------------------
+ * CSS-01 治理结论：生产环境 @import 未合并
+ * 证据：无 PostCSS/Webpack/Vite 等构建；Django 仅使用 ManifestStaticFilesStorage
+ * 做收集与文件名哈希，不解析/合并 CSS。@import 会触发串行请求，首屏与弱网受影响。
+ * 建议：生产用构建将 core+components+layouts 合并为少量文件（如 main.css + modules/*.css）。
+ * ---------------------------------------------------------------------------
  */
 
 /* ============================================
@@ -36,10 +43,10 @@
 @import url('components/navigation.css');
 @import url('components/badges.css');
 @import url('components/messages.css');
-@import url('components/pages.css');
+@import url('components/page-shell.css');
 @import url('components/datepicker.css');
 @import url('components/tag-input.css');
-@import url('components/two_column_layout.css');
+@import url('layouts/two-column-layout.css');
 @import url('components/forms.css');
 @import url('components/modals.css');
 /* @import url('components/sidebar_v2.css'); */ /* 已移除：侧边栏样式应在侧边栏模板中按需引入 */
@@ -55,10 +62,12 @@
 /* @import url('layouts/responsive.css'); */
 
 /* ============================================
-   其他通用样式
+   其他通用样式（业务/第三方按需引入，不全局加载）
    ============================================ */
-@import url('qixinbao-autofill.css');
-@import url('approval_path.css');
+/* qixinbao-autofill.css：仅 contact_form.html 等需要企信宝自动填充的页面引入 */
+/* approval_path.css：仅 customer_detail.html 等需要审批路径时间线的页面引入 */
+/* @import url('qixinbao-autofill.css'); */
+/* @import url('approval_path.css'); */
 
 /* ============================================
    模块特定样式（按需加载）
@@ -75,21 +84,20 @@
 /* @import url('modules/personnel.css'); */
 
 /* ============================================
-   交互性修复
+   交互性修复（仅 modifier 生效，禁止全局兜底 - 治理 CSS-03）
    ============================================ */
-
-/* 确保表单容器可以正常交互 */
-.workspace-content,
-.customer-content,
-.workspace-main {
+/* 若某页出现点击穿透/被遮罩盖住，请在对应容器上加 modifier 再生效，并排查根因
+ * （如 navigation.css 的 .navbar::before、modals 的 overlay 等 pointer-events/z-index）*/
+.workspace-content--ensure-interactive,
+.customer-content--ensure-interactive,
+.workspace-main--ensure-interactive {
     position: relative;
     z-index: 1;
     pointer-events: auto;
 }
 
-/* 确保表单区域可以正常交互 */
-.form-section,
-form {
+.form-section--ensure-interactive,
+form.form--ensure-interactive {
     position: relative;
     z-index: 1;
     pointer-events: auto;
@@ -101,12 +109,10 @@ form {
 
 /* 强制颜色模式支持 - 替代已弃用的-ms-high-contrast-adjust */
 @media (forced-colors: active) {
-    /* 确保在强制颜色模式下元素可见 */
     * {
         forced-color-adjust: auto;
     }
-    
-    /* 对于需要保持自定义颜色的元素，使用preserve-parent */
+    /* preserve-parent 仅对确实需保持品牌色的元素使用，避免链接/按钮可读性下降 */
     .welcome-card-top,
     .navbar,
     button,

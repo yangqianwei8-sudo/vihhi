@@ -28,6 +28,7 @@
 - pagination_params: 分页URL参数（字典格式，用于保留筛选条件）
 - table_class: 额外的表格CSS类（可选）
 - column_settings_btn: 是否显示列设置按钮（默认：False）
+- 样式约定：禁止 column.style，请用 column.class 控制列样式。操作列必须提供 action_template 或关闭 show_actions。
 {% endcomment %}
 
 {% load static %}
@@ -36,19 +37,18 @@
     <div class="list-page-table-wrapper">
         {% if data %}
         <div class="table-responsive">
-            <table class="list-page-table{% if table_class %} {{ table_class }}{% endif %}" id="{% if table_id %}{{ table_id }}{% else %}dataTable{% endif %}">
+            <table class="list-page-table{% if table_class %} {{ table_class }}{% endif %}" id="{% if table_id %}{{ table_id }}{% else %}dataTable{% endif %}" data-table-id="{{ table_id|default:'dataTable' }}">
                 <thead>
                     <tr>
                         {% if show_checkbox %}
                         <th width="40" class="column-checkbox">
-                            <input type="checkbox" id="selectAll" class="form-check-input">
+                            <input type="checkbox" class="js-select-all form-check-input" data-table="{{ table_id|default:'dataTable' }}" aria-label="全选">
                         </th>
                         {% endif %}
                         {% for column in columns %}
-                        <th {% if column.width %}width="{{ column.width }}"{% endif %} 
+                        <th {% if column.width %}width="{{ column.width }}"{% endif %}
                             {% if column.class %}class="{{ column.class }}{% if column.sortable %} sortable{% endif %}"{% elif column.sortable %}class="sortable"{% endif %}
-                            {% if column.sortable %}data-sort="{{ column.field }}"{% endif %}
-                            {% if column.style %}style="{{ column.style }}"{% endif %}>
+                            {% if column.sortable %}data-sort="{{ column.field }}"{% endif %}>
                             {{ column.name }}
                             {% if column.sortable %}
                             <span class="sort-icon">⇅</span>
@@ -59,8 +59,8 @@
                         <th width="120" class="column-actions">
                             操作
                             {% if column_settings_btn %}
-                            <button type="button" class="btn btn-link btn-sm p-0 ms-2" id="tableColumnSettingsBtn" data-bs-toggle="modal" data-bs-target="#fieldsSettingsModal" title="自定义显示列" style="text-decoration: none; color: #FFC107 !important;">
-                                <i class="bi bi-gear-fill" style="color: #FFC107 !important;"></i>
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-2 column-settings-btn" data-bs-toggle="modal" data-bs-target="#fieldsSettingsModal" title="自定义显示列" aria-label="列设置">
+                                <i class="bi bi-gear-fill"></i>
                             </button>
                             {% endif %}
                         </th>
@@ -72,13 +72,13 @@
                     <tr data-id="{{ item.id|default:forloop.counter }}">
                         {% if show_checkbox %}
                         <td class="column-checkbox">
-                            <input type="checkbox" name="{% if checkbox_name %}{{ checkbox_name }}{% else %}item_ids{% endif %}" 
-                                   value="{{ item.id|default:forloop.counter }}" 
-                                   class="row-checkbox form-check-input">
+                            <input type="checkbox" name="{% if checkbox_name %}{{ checkbox_name }}{% else %}item_ids{% endif %}"
+                                   value="{{ item.id|default:forloop.counter }}"
+                                   class="row-checkbox form-check-input" data-table="{{ table_id|default:'dataTable' }}">
                         </td>
                         {% endif %}
                         {% for column in columns %}
-                        <td class="{% if column.class %}{{ column.class }}{% endif %}" {% if column.style %}style="{{ column.style }}"{% endif %}>
+                        <td class="{% if column.class %}{{ column.class }}{% endif %}">
                             {% if column.template %}
                                 {% include column.template with item=item column=column %}
                             {% elif column.field %}
@@ -119,10 +119,7 @@
                             {% if action_template %}
                                 {% include action_template with item=item %}
                             {% else %}
-                                <div class="btn-group btn-group-sm">
-                                    <a href="#" class="btn btn-sm" onclick="viewItem({{ item.id }}); return false;">查看</a>
-                                    <a href="#" class="btn btn-sm" onclick="editItem({{ item.id }}); return false;">编辑</a>
-                                </div>
+                                <span class="text-muted">—</span>
                             {% endif %}
                         </td>
                         {% endif %}
@@ -139,7 +136,7 @@
             </table>
         </div>
         {% else %}
-        <div class="alert alert-info" style="margin: 20px;">{{ empty_message|default:"暂无数据" }}</div>
+        <div class="alert alert-info m-3">{{ empty_message|default:"暂无数据" }}</div>
         {% endif %}
     </div>
 </div>

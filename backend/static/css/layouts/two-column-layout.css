@@ -1,34 +1,14 @@
-/* ===== 两栏布局样式 ===== */
+/* ===== 两栏布局样式（layouts 层） ===== */
 /* 风格：简洁、美观、大方，灰色黑色为主，卡片直角 */
-
-/* ===== 引入说明 ===== */
-/* 
- * 使用方式：
- * 1. 标准方式（推荐）：在模板中先引入 common.css，再引入此文件
- *    <link rel="stylesheet" href="{% static 'css/common.css' %}">
- *    <link rel="stylesheet" href="{% static 'css/components/two_column_layout.css' %}">
- *    此时 common.css 已包含 core/variables.css，变量已可用，无需额外引入
- * 
- * 2. 独立使用：如果单独使用此文件（不引入 common.css），需要取消下面的注释
- *    @import url('../core/variables.css'); 
- */
-
-/* ===== 引入通用左侧栏样式 ===== */
-/* 已移除：侧边栏样式应在侧边栏模板中按需引入，避免在不需要侧边栏的页面也加载样式 */
-/* 注意：sidebar_v2_fixed.css 依赖 --navbar-height 变量，需确保已引入 core/variables.css */
-/* @import url('sidebar_v2_fixed.css'); */
+/* 由 common.css 统一 @import，或两栏基模板按需引入。变量依赖 core/variables.css。 */
 
 /* ===== CSS 变量定义 ===== */
-/* 注意：使用通用变量系统，避免重复定义和冲突 */
 :root {
-  /* 使用通用变量，避免硬编码 */
-  /* 优先使用模板设置的 --sidebar-width，如果没有则使用 --nav-expanded-width */
   --two-col-sidebar-width: var(--sidebar-width, var(--nav-expanded-width, 232px));
-  --two-col-navbar-height: var(--navbar-height, 62px); /* 顶部导航栏高度 */
-  --two-col-gap: var(--spacing-sm, 8px); /* 使用通用间距变量 */
-  --two-col-content-padding: var(--spacing-sm, 8px); /* 使用通用间距变量 */
-  --two-col-content-padding-bottom: var(--spacing-lg, 24px); /* 使用通用间距变量 */
-  /* 使用通用颜色变量，保持一致性 */
+  --two-col-navbar-height: var(--navbar-height, 62px);
+  --two-col-gap: var(--spacing-sm, 8px);
+  --two-col-content-padding: var(--spacing-sm, 8px);
+  --two-col-content-padding-bottom: var(--spacing-lg, 24px);
   --two-col-bg: var(--vh-surface, #F5F5F5);
   --two-col-card-bg: var(--vh-card-bg, #ffffff);
   --two-col-card-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
@@ -39,22 +19,6 @@
   --two-col-text-muted: var(--vh-text-light, #9CA3AF);
   --two-col-transition: var(--transition-base, all 0.2s ease);
 }
-
-/* ===== Body 滚动控制 ===== */
-/* 当使用 two-column-layout 时，强制禁用 body 的滚动条，只让 .two-col-main 滚动 */
-/* 避免双重滚动条问题：body 和 .two-col-main 不能同时有滚动条 */
-/* 使用多种选择器确保兼容性和优先级 */
-/* 注释：与通用样式冲突，通用样式已定义 body 的 padding-top，此处可能影响布局 */
-/* body:has(.two-column-layout) {
-  overflow-y: hidden !important;
-  height: 100% !important;
-} */
-
-/* 如果浏览器不支持 :has()，使用类名方式 */
-/* body.two-column-layout-active {
-  overflow-y: hidden !important;
-  height: 100% !important;
-} */
 
 /* ===== 布局容器 ===== */
 .two-column-layout {
@@ -73,7 +37,6 @@
 }
 
 /* ===== 主内容区 ===== */
-/* 关键：设置 margin-left 确保内容从侧栏右侧开始 */
 .two-col-main {
   flex: 1 1 auto !important;
   margin-left: calc(var(--two-col-sidebar-width) + var(--two-col-gap)) !important;
@@ -100,7 +63,6 @@
   transition: var(--two-col-transition);
 }
 
-/* 自定义滚动条样式 */
 .two-col-main::-webkit-scrollbar {
   width: 8px;
 }
@@ -131,24 +93,20 @@
   gap: 8px;
 }
 
-/* 内容区变体：无内边距 */
 .two-col-content--no-padding {
   padding: 0 !important;
 }
 
-/* 内容区变体：紧凑模式 */
 .two-col-content--compact {
   padding: var(--spacing-xs, 4px) var(--spacing-xs, 4px) var(--spacing-sm, 12px) var(--spacing-xs, 4px) !important;
   gap: var(--spacing-sm, 8px);
 }
 
-/* 内容区变体：宽松模式 */
 .two-col-content--spacious {
   padding: var(--spacing-md, 16px) var(--spacing-md, 16px) var(--spacing-xl, 32px) var(--spacing-md, 16px) !important;
   gap: var(--spacing-lg, 24px);
 }
 
-/* 两栏主内容区内卡片间距统一为 8px（覆盖模板中的 mb-4 等） */
 .two-col-content .card,
 .two-col-content .info-card {
   margin-bottom: 8px !important;
@@ -158,17 +116,7 @@
   margin-bottom: 0 !important;
 }
 
-/* ===== 页面头部样式 ===== */
-/* 
- * 说明：两栏布局的页面头部需要特殊的样式处理
- * - 覆盖通用样式以确保在两栏布局中的正确显示
- * - 使用语义化的类名和通用变量保持一致性
- * - 选择器针对两栏布局的特定结构，避免影响其他页面
- */
-
-/* 页面头部容器样式：位置/间距/边框由 _module_layout_styles 统一控制，保证计划首页与列表页一致 */
-
-/* 标题容器（包含主标题和副标题） */
+/* ===== 页面头部 ===== */
 .two-col-content > .d-flex.align-items-end.justify-content-between > div:first-child {
   flex: 1;
   display: flex;
@@ -177,15 +125,7 @@
   flex-wrap: wrap;
 }
 
-/* ===== 主标题样式 ===== */
-/* 已移除：主标题样式由通用样式系统（base.css）统一管理 */
-/* 如需自定义，请在具体模板中使用内联样式或模块特定样式 */
-
-/* ===== 副标题样式 ===== */
-/* 已移除：副标题样式由通用样式系统（base.css）统一管理 */
-/* 如需自定义，请在具体模板中使用内联样式或模块特定样式 */
-
-/* ===== 卡片容器样式 ===== */
+/* ===== 卡片容器 ===== */
 .two-col-card {
   background: var(--two-col-card-bg);
   border: 1px solid var(--two-col-border-color);
@@ -207,7 +147,7 @@
 }
 
 .two-col-card-title {
-  font-size: var(--font-size-md, 16px); /* 使用通用字体大小变量 */
+  font-size: var(--font-size-md, 16px);
   font-weight: 600;
   color: var(--two-col-text-primary);
   margin: 0;
@@ -223,7 +163,6 @@
   border-top: 1px solid var(--two-col-border-color);
 }
 
-/* 卡片变体 */
 .two-col-card--bordered {
   border: 1px solid var(--two-col-border-color);
   box-shadow: none;
@@ -248,8 +187,7 @@
   padding: var(--spacing-lg, 24px);
 }
 
-/* ===== 间距工具类 ===== */
-/* 注意：这些工具类使用通用间距变量，保持与系统一致 */
+/* ===== 间距/文本/分隔线/加载/空状态/网格/Flex 工具 ===== */
 .two-col-gap-xs { gap: var(--spacing-xs, 4px); }
 .two-col-gap-sm { gap: var(--spacing-sm, 8px); }
 .two-col-gap-md { gap: var(--spacing-md, 16px); }
@@ -274,12 +212,10 @@
 .two-col-p-lg { padding: var(--spacing-lg, 24px) !important; }
 .two-col-p-xl { padding: var(--spacing-xl, 32px) !important; }
 
-/* ===== 文本样式工具类 ===== */
 .two-col-text-primary { color: var(--two-col-text-primary) !important; }
 .two-col-text-secondary { color: var(--two-col-text-secondary) !important; }
 .two-col-text-muted { color: var(--two-col-text-muted) !important; }
 
-/* 使用通用字体大小变量 */
 .two-col-text-xs { font-size: var(--font-size-xs, 12px) !important; }
 .two-col-text-sm { font-size: var(--font-size-sm, 14px) !important; }
 .two-col-text-md { font-size: var(--font-size-md, 16px) !important; }
@@ -290,7 +226,6 @@
 .two-col-text-normal { font-weight: 400 !important; }
 .two-col-text-light { font-weight: 300 !important; }
 
-/* ===== 分隔线样式 ===== */
 .two-col-divider {
   height: 1px;
   background: var(--two-col-border-color);
@@ -308,7 +243,6 @@
   height: 2px;
 }
 
-/* ===== 加载状态样式 ===== */
 .two-col-loading {
   display: flex;
   align-items: center;
@@ -332,7 +266,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* ===== 空状态样式 ===== */
 .two-col-empty {
   display: flex;
   flex-direction: column;
@@ -354,7 +287,6 @@
   color: var(--two-col-text-secondary);
 }
 
-/* ===== 网格布局工具 ===== */
 .two-col-grid {
   display: grid;
   gap: var(--spacing-md, 16px);
@@ -364,37 +296,15 @@
 .two-col-grid--3 { grid-template-columns: repeat(3, 1fr); }
 .two-col-grid--4 { grid-template-columns: repeat(4, 1fr); }
 
-/* ===== Flex 布局工具 ===== */
-.two-col-flex {
-  display: flex;
-}
+.two-col-flex { display: flex; }
+.two-col-flex--column { flex-direction: column; }
+.two-col-flex--row { flex-direction: row; }
+.two-col-flex--center { align-items: center; justify-content: center; }
+.two-col-flex--between { justify-content: space-between; }
+.two-col-flex--around { justify-content: space-around; }
+.two-col-flex--wrap { flex-wrap: wrap; }
 
-.two-col-flex--column {
-  flex-direction: column;
-}
-
-.two-col-flex--row {
-  flex-direction: row;
-}
-
-.two-col-flex--center {
-  align-items: center;
-  justify-content: center;
-}
-
-.two-col-flex--between {
-  justify-content: space-between;
-}
-
-.two-col-flex--around {
-  justify-content: space-around;
-}
-
-.two-col-flex--wrap {
-  flex-wrap: wrap;
-}
-
-/* ===== 响应式设计 ===== */
+/* ===== 响应式 ===== */
 @media (max-width: 1200px) {
   .two-col-grid--4 { grid-template-columns: repeat(3, 1fr); }
   .two-col-grid--3 { grid-template-columns: repeat(2, 1fr); }
@@ -410,24 +320,23 @@
     margin-left: 0 !important;
     width: 100%;
   }
-  
+
   .two-col-content {
     padding: var(--spacing-sm, 8px) !important;
     gap: var(--spacing-sm, 12px);
   }
-  
+
   .two-col-grid--4,
   .two-col-grid--3,
   .two-col-grid--2 {
     grid-template-columns: 1fr;
   }
-  
+
   .two-col-card {
     padding: var(--spacing-sm, 12px);
     margin-bottom: var(--spacing-sm, 12px);
   }
-  
-  /* 移动端：页面头部改为垂直布局 */
+
   .two-col-content > .d-flex.align-items-end.justify-content-between {
     flex-direction: column;
     align-items: flex-start !important;
@@ -440,66 +349,31 @@
     padding: var(--spacing-xs, 4px) !important;
     gap: var(--spacing-sm, 8px);
   }
-  
+
   .two-col-card {
     padding: var(--spacing-sm, 8px);
     margin-bottom: var(--spacing-sm, 8px);
   }
 }
 
-/* ===== 顶部导航栏样式增强 ===== */
-/* 当使用两栏布局时，确保顶部栏样式正确 */
-/* 注释：与通用样式冲突，navigation.css 已定义 .navbar 的 position、top、left、right、z-index、width */
-/* .two-column-layout ~ .navbar,
-body:has(.two-column-layout) .navbar {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  z-index: 1030 !important;
-  width: 100% !important;
-} */
-
-/* 顶部导航栏与侧边栏的配合 */
-/* 注释掉：让导航栏从最左边开始，不再与侧边栏对齐 */
-/* body:has(.two-column-layout) .navbar {
-  padding-left: calc(var(--two-col-sidebar-width) + var(--two-col-gap));
-  transition: padding-left 0.3s ease;
-} */
-
-/* 响应式：移动端顶部栏全宽 */
-/* 注释：与通用样式冲突，navigation.css 已处理导航栏样式 */
-/* @media (max-width: 768px) {
-  body:has(.two-column-layout) .navbar {
-    padding-left: 0 !important;
-  }
-} */
-
-/* ===== 打印样式 ===== */
-/* 注意：打印样式可能与 base.css 的打印样式冲突，但选择器更具体，保留以覆盖通用样式 */
+/* ===== 打印 ===== */
 @media print {
   .two-col-main {
     margin-left: 0 !important;
     overflow: visible !important;
     height: auto !important;
   }
-  
+
   .two-col-content {
     padding: 0 !important;
   }
-  
+
   .two-col-card {
     box-shadow: none;
-    border: 1px solid var(--vh-border, #ddd); /* 使用通用变量 */
+    border: 1px solid var(--vh-border, #ddd);
     page-break-inside: avoid;
   }
-  
-  /* 打印时隐藏顶部栏 */
-  /* 注释：base.css 已定义 .navbar { display: none !important; }，此处可能重复 */
-  /* .navbar {
-    display: none !important;
-  } */
-  
+
   .two-column-layout {
     margin-top: 0 !important;
     min-height: 100vh !important;
