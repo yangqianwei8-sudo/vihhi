@@ -1,5 +1,10 @@
 {% extends "shared/two_column_layout_base.html" %}
 {% load static %}
+
+{% block base_extra_css %}
+  <link rel="stylesheet" href="{% static 'css/layouts/form-page-overrides.css' %}">
+{% endblock base_extra_css %}
+
 {# 
 共享创建表单模板
 继承 two_column_layout_base（两栏布局基模板），提供统一的创建表单结构
@@ -244,137 +249,7 @@
 {% endblock pm_content %}
 
 {% block module_extra_js %}
-<script>
-(function() {
-  'use strict';
-  
-  // 等待DOM加载完成
-  document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('createForm');
-    if (!form) return;
-    
-    const headerSubmitButton = document.getElementById('headerSubmitButton');
-    const draftButton = document.getElementById('draftButton');
-    const hiddenSubmitButton = document.getElementById('hiddenSubmitButton');
-    const isDraftField = document.getElementById('isDraftField');
-    
-    // 处理禁用字段：为禁用的字段创建隐藏输入，确保表单提交时包含这些值
-    function handleDisabledFields() {
-      const disabledFields = form.querySelectorAll('[disabled]');
-      disabledFields.forEach(function(field) {
-        if (!field.name) return;
-        
-        let value = '';
-        if (field.tagName === 'SELECT') {
-          const selectedOption = field.options[field.selectedIndex];
-          value = selectedOption ? selectedOption.value : '';
-        } else {
-          value = field.value || '';
-        }
-        
-        if (value !== undefined && value !== null) {
-          const existingHidden = form.querySelector(`input[type="hidden"][name="${field.name}"]`);
-          if (existingHidden) {
-            existingHidden.value = value;
-          } else {
-            const hiddenField = document.createElement('input');
-            hiddenField.type = 'hidden';
-            hiddenField.name = field.name;
-            hiddenField.value = value;
-            form.appendChild(hiddenField);
-          }
-        }
-      });
-    }
-    
-    // 提交表单的通用函数
-    function submitForm() {
-      handleDisabledFields();
-      if (hiddenSubmitButton) {
-        hiddenSubmitButton.click();
-      } else {
-        form.submit();
-      }
-    }
-    
-    // 创建按钮事件处理
-    if (headerSubmitButton) {
-      headerSubmitButton.addEventListener('click', function(e) {
-        e.preventDefault();
-        if (isDraftField) {
-          isDraftField.value = '1';
-        }
-        submitForm();
-      });
-    }
-    
-    // 暂存草稿按钮事件处理
-    if (draftButton) {
-      draftButton.addEventListener('click', function(e) {
-        e.preventDefault();
-        if (isDraftField) {
-          isDraftField.value = '1';
-        }
-        submitForm();
-      });
-    }
-    
-    // 表单验证
-    form.addEventListener('submit', function(e) {
-      handleDisabledFields();
-      
-      // 必填字段验证
-      const requiredFields = form.querySelectorAll('[required]');
-      let hasError = false;
-      
-      requiredFields.forEach(function(field) {
-        if (field.hasAttribute('disabled')) return;
-        if (!field.value || field.value.trim() === '') {
-          hasError = true;
-          field.classList.add('is-invalid');
-        } else {
-          field.classList.remove('is-invalid');
-        }
-      });
-      
-      if (hasError) {
-        e.preventDefault();
-        const firstError = form.querySelector('.is-invalid');
-        if (firstError) {
-          firstError.focus();
-          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        return false;
-      }
-      
-      // 保存当前滚动位置到 sessionStorage（用于页面重新加载后恢复位置）
-      const scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
-      sessionStorage.setItem('formScrollPosition', scrollPosition);
-      sessionStorage.setItem('formSubmitted', 'true');
-    });
-    
-    // 页面加载后恢复滚动位置或滚动到错误消息
-    (function() {
-      const formSubmitted = sessionStorage.getItem('formSubmitted');
-      if (formSubmitted === 'true') {
-        sessionStorage.removeItem('formSubmitted');
-        
-        setTimeout(function() {
-          const errorAlert = document.querySelector('.alert-danger, .alert-warning, .alert-info');
-          if (errorAlert) {
-            errorAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          } else {
-            const savedPosition = sessionStorage.getItem('formScrollPosition');
-            if (savedPosition) {
-              window.scrollTo(0, parseInt(savedPosition, 10));
-              sessionStorage.removeItem('formScrollPosition');
-            }
-          }
-        }, 200);
-      }
-    })();
-  });
-})();
-</script>
+<script type="application/json" id="createFormConfig">{"formId":"createForm","hiddenSubmitId":"hiddenSubmitButton","isDraftFieldId":"isDraftField","submitBtnId":"headerSubmitButton","draftBtnId":"draftButton","scrollRestore":true,"validateRequired":true,"errorAlertSelector":".alert-danger, .alert-warning, .alert-info"}</script>
+<script src="{% static 'js/ui.js' %}"></script>
 {{ block.super }}
 {% endblock module_extra_js %}
