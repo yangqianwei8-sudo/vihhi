@@ -45,16 +45,10 @@
         display: none;
     }
     /* 优先级徽章样式 */
-    .priority-badge {
-        padding: 2px 8px;
-        border-radius: 8px;
-        font-size: var(--font-size-xs);
-        font-weight: 500;
-    }
-    .priority-low { background: #e7f3ff; color: #0066cc; }
-    .priority-normal { background: #f0f0f0; color: #666; }
-    .priority-high { background: #fff4e6; color: #cc6600; }
-    .priority-urgent { background: #ffe6e6; color: #cc0000; }
+    {% comment %}
+      徽标样式已统一迁移到 components/badges.css 中管理
+      不再需要内联样式定义，使用全局 .priority-badge 样式类
+    {% endcomment %}
 </style>
 {% endblock %}
 
@@ -71,7 +65,7 @@
                 <i class="bi bi-arrow-left"></i> 返回列表
             </a>
             {% if affair.status == 'pending' and affair.responsible_user == request.user %}
-            <a href="{% url 'admin_pages:affair_start' affair_id=affair.id %}" class="btn btn-success" onclick="return confirm('确认开始处理此事务？');">
+            <a href="{% url 'admin_pages:affair_start' affair_id=affair.id %}" class="btn btn-success" data-action="confirm-before-navigate" data-confirm-message="确认开始处理此事务？">
                 <i class="bi bi-play-circle"></i> 开始处理
             </a>
             {% endif %}

@@ -160,7 +160,10 @@ def system_management_home(request):
     summary_cards = []
     try:
         users_count = User.objects.count()
-        departments_count = Department.objects.count()
+        qs = Department.objects.all()
+        if getattr(request.user, 'company_id', None):
+            qs = qs.filter(company_id=request.user.company_id)
+        departments_count = qs.count()
         roles_count = Role.objects.count()
         
         summary_cards = [
@@ -222,7 +225,10 @@ def system_settings(request):
     if not is_system_admin:
         from django.core.exceptions import PermissionDenied
         raise PermissionDenied("仅系统管理员可以访问系统设置。")
-    departments = Department.objects.count()
+    dept_qs = Department.objects.all()
+    if getattr(request.user, 'company_id', None):
+        dept_qs = dept_qs.filter(company_id=request.user.company_id)
+    departments = dept_qs.count()
     users = User.objects.count()
     roles_count = Role.objects.count()
     summary_cards = []
@@ -887,7 +893,11 @@ def create_form_example(request):
         def __init__(self, *args, **kwargs):
             user = kwargs.pop('user', None)
             super().__init__(*args, **kwargs)
-            
+            # P0-3: 部门下拉按用户公司过滤
+            dept_qs = Department.objects.filter(is_active=True)
+            if getattr(user, 'company_id', None):
+                dept_qs = dept_qs.filter(company_id=user.company_id)
+            self.fields['responsible_department'].queryset = dept_qs
             # 设置负责人字段的显示格式
             def label_from_instance(obj):
                 if hasattr(obj, 'get_full_name'):

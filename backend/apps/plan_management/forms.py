@@ -109,9 +109,12 @@ class StrategicGoalForm(forms.ModelForm):
         # 设置负责人查询集（确保始终有查询集）
         self.fields['responsible_person'].queryset = User.objects.filter(is_active=True)
         
-        # 设置部门查询集
-        self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
-        
+        # 设置部门查询集（P0-3: 按用户公司过滤）
+        dept_qs = Department.objects.filter(is_active=True)
+        if getattr(user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=user.company_id)
+        self.fields['responsible_department'].queryset = dept_qs
+
         # 确保 name 和 level 字段为必填
         self.fields['name'].required = True
         self.fields['level'].required = True
@@ -583,7 +586,7 @@ class GoalAdjustmentForm(forms.ModelForm):
     )
     
     responsible_department = forms.ModelChoiceField(
-        queryset=Department.objects.all(),
+        queryset=Department.objects.all(),  # 在 __init__ 中按公司收紧
         required=False,
         widget=forms.Select(attrs={
             'class': 'form-select',
@@ -660,8 +663,16 @@ class GoalAdjustmentForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         self.goal = kwargs.pop('goal', None)
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        
+        # P0-3: 部门下拉仅当前公司（保证 initial 所在公司可见）
+        dept_qs = Department.objects.all()
+        cid = getattr(user, 'company_id', None) if user else None
+        if not cid and self.goal and self.goal.responsible_department_id:
+            cid = getattr(self.goal.responsible_department, 'company_id', None)
+        if cid:
+            dept_qs = dept_qs.filter(company_id=cid)
+        self.fields['responsible_department'].queryset = dept_qs
         # 如果有关联的目标，设置负责人和部门的初始值
         if self.goal:
             if self.goal.responsible_person:
@@ -669,7 +680,6 @@ class GoalAdjustmentForm(forms.ModelForm):
             if self.goal.responsible_department:
                 self.fields['responsible_department'].initial = self.goal.responsible_department
             self.fields['goal_number_display'].initial = self.goal.goal_number
-        
         # 设置新负责人查询集
         self.fields['new_responsible_person'].queryset = User.objects.filter(is_active=True)
         self.fields['new_responsible_person'].required = False
@@ -863,9 +873,12 @@ class PlanForm(forms.ModelForm):
         self.fields['responsible_person'].label_from_instance = label_from_instance
         self.fields['participants'].label_from_instance = label_from_instance
         
-        # 设置部门查询集
-        self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
-        
+        # 设置部门查询集（P0-3: 按用户公司过滤）
+        dept_qs = Department.objects.filter(is_active=True)
+        if getattr(user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=user.company_id)
+        self.fields['responsible_department'].queryset = dept_qs
+
         # 新建时：设置所属部门和负责人为只读（默认值，不可修改）
         if not self.instance or not self.instance.pk:
             if user:
@@ -1536,7 +1549,7 @@ class PlanAdjustmentForm(forms.ModelForm):
     )
     
     responsible_department = forms.ModelChoiceField(
-        queryset=Department.objects.all(),
+        queryset=Department.objects.all(),  # 在 __init__ 中按公司收紧
         required=False,
         widget=forms.Select(attrs={
             'class': 'form-select',
@@ -1625,8 +1638,16 @@ class PlanAdjustmentForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         self.plan = kwargs.pop('plan', None)
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        
+        # P0-3: 部门下拉仅当前公司（保证 initial 所在公司可见）
+        dept_qs = Department.objects.all()
+        cid = getattr(user, 'company_id', None) if user else None
+        if not cid and self.plan:
+            cid = getattr(self.plan, 'company_id', None) or (getattr(self.plan.responsible_department, 'company_id', None) if getattr(self.plan, 'responsible_department', None) else None)
+        if cid:
+            dept_qs = dept_qs.filter(company_id=cid)
+        self.fields['responsible_department'].queryset = dept_qs
         # 如果有关联的计划，设置负责人和部门的初始值
         if self.plan:
             if self.plan.responsible_person:
@@ -1634,11 +1655,9 @@ class PlanAdjustmentForm(forms.ModelForm):
             if self.plan.responsible_department:
                 self.fields['responsible_department'].initial = self.plan.responsible_department
             self.fields['plan_number_display'].initial = self.plan.plan_number
-        
         # 设置新负责人查询集
         self.fields['new_responsible_person'].queryset = User.objects.filter(is_active=True)
         self.fields['new_responsible_person'].required = False
-        
         # 设置新协作人员查询集
         self.fields['new_participants'].queryset = User.objects.filter(is_active=True)
         self.fields['new_participants'].required = False

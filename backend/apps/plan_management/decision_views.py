@@ -34,12 +34,12 @@ class PlanDecisionViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class PlanDecisionDecideAPIView(APIView):
-    """计划决策裁决 API"""
+    """计划决策裁决 API（G1-4: PlanDecision 已退场，此功能已禁用）"""
     permission_classes = [IsAuthenticated]
 
     def post(self, request, decision_id: int):
         """
-        裁决决策
+        裁决决策（G1-4: PlanDecision 已退场，此功能已禁用）
         
         POST /api/plan/plan-decisions/{decision_id}/decide/
         Body: {
@@ -47,7 +47,12 @@ class PlanDecisionDecideAPIView(APIView):
             "reason": "裁决原因（可选）"
         }
         """
-        decision_obj = get_object_or_404(PlanDecision, id=decision_id)
+        # G1-4: PlanDecision 已退场，不再支持通过此接口裁决
+        # 所有审批统一使用 WorkflowEngine（审批引擎）
+        return Response({
+            "success": False,
+            "message": "旧审批系统已退场，请使用审批引擎进行审批"
+        }, status=status.HTTP_410_GONE)
 
         approve = request.data.get("approve")
         if approve not in [True, False, "true", "false", 1, 0, "1", "0"]:

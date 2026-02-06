@@ -6,10 +6,29 @@ from typing import Optional, List, Dict
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
+from django.core.exceptions import ValidationError
 from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalNode, ApprovalInstance, ApprovalRecord
 from backend.apps.system_management.models import User
 
 logger = logging.getLogger(__name__)
+
+
+class CompanyScopeNotResolved(ValidationError):
+    """
+    公司范围未解析异常
+    
+    当审批流程无法确定公司归属时抛出，用于阻止跨公司审批。
+    """
+    def __init__(self, instance, message=None):
+        self.instance = instance
+        if message is None:
+            message = (
+                f"未配置公司归属/无法确定company范围，已阻止审批以避免跨公司串人。"
+                f"审批实例：{instance.instance_number if hasattr(instance, 'instance_number') else instance.id}，"
+                f"关联对象：{instance.content_type.model}#{instance.object_id}。"
+                f"请确保业务对象已配置company字段，或联系管理员配置用户所属公司。"
+            )
+        super().__init__(message)
 
 
 class ApprovalEngine:
@@ -84,6 +103,18 @@ class ApprovalEngine:
     @staticmethod
     def _create_pending_records(instance: ApprovalInstance, node: ApprovalNode):
         """为节点创建待审批记录"""
+        # 如果是结束节点，直接完成流程
+        if node.node_type == 'end':
+            instance.status = 'approved'
+            instance.completed_time = timezone.now()
+            instance.current_node = None
+            instance.save()
+            logger.info(f'到达结束节点，审批流程完成: {instance.instance_number}')
+            ApprovalEngine._update_business_object_status(instance, 'approved')
+            # 抄送出纳员（如果是借款审批流程）
+            ApprovalEngine._notify_cashier_on_loan_approval(instance)
+            return
+        
         approvers = ApprovalEngine._get_approvers(node, instance)
         
         if not approvers:
@@ -165,45 +196,220 @@ class ApprovalEngine:
     
     @staticmethod
     def _get_approvers(node: ApprovalNode, instance: ApprovalInstance) -> List[User]:
-        """获取节点的审批人列表"""
+        """
+        获取节点的审批人列表（完全配置化，无硬编码）
+        
+        ⚠️ P0-1: 公司隔离安全阀
+        - 优先从 instance 关联的业务对象获取 company
+        - 如果无法确定 company，直接拒绝流转/发起审批（抛出 CompanyScopeNotResolved）
+        - 所有选人分支强制加 company 过滤
+        
+        支持的审批人类型（全部可配置，无需修改代码）：
+        - role: 指定角色（动态查询拥有该角色的所有用户）
+        - department: 指定部门（动态查询部门内所有用户）
+        - department_manager: 部门经理（动态获取申请人部门的负责人）
+        - creator: 创建人（动态获取申请人）
+        - creator_manager: 创建人直属上级（动态获取申请人的manager）
+        - creator_manager_chain: 创建人多级上级（通过approver_config.levels控制级数）
+        """
+        # ========== P0-1: 获取业务对象的 company ==========
+        company = None
+        company_id = None
+        try:
+            # 尝试从关联的业务对象获取 company
+            content_obj = instance.content_type.get_object_for_this_type(id=instance.object_id)
+            if hasattr(content_obj, 'company') and content_obj.company:
+                company = content_obj.company
+                company_id = company.id
+                logger.info(f"从业务对象获取 company: {company.company_name} (ID: {company.id})")
+            elif hasattr(content_obj, 'company_id') and content_obj.company_id:
+                # 如果只有 company_id，尝试获取对象
+                from backend.apps.system_management.models import OurCompany
+                company = OurCompany.objects.filter(id=content_obj.company_id).first()
+                if company:
+                    company_id = company.id
+                    logger.info(f"从业务对象 company_id 获取 company: {company.company_name} (ID: {company.id})")
+        except Exception as e:
+            logger.warning(f"获取业务对象 company 失败: {str(e)}")
+        
+        # 如果无法确定 company，直接拒绝审批
+        if not company_id:
+            raise CompanyScopeNotResolved(instance)
+        # ========== P0-1 结束 ==========
+        
         approvers = []
         
-        if node.approver_type == 'user':
-            approvers = list(node.approver_users.all())
-        elif node.approver_type == 'role':
+        if node.approver_type == 'role':
+            # 指定角色：动态查询拥有该角色的所有用户（组织变化自动适配）
             from backend.apps.system_management.models import Role
             role_ids = node.approver_roles.values_list('id', flat=True)
-            approvers = list(User.objects.filter(roles__id__in=role_ids).distinct())
+            # P0-1: 强制加 company 过滤
+            approvers = list(User.objects.filter(
+                roles__id__in=role_ids,
+                company_id=company_id,
+                is_active=True
+            ).distinct())
         elif node.approver_type == 'department':
+            # 指定部门：动态查询部门内所有用户（组织变化自动适配）
             dept_ids = node.approver_departments.values_list('id', flat=True)
-            approvers = list(User.objects.filter(department_id__in=dept_ids).distinct())
+            # P0-1: 强制加 company 过滤
+            approvers = list(User.objects.filter(
+                department_id__in=dept_ids,
+                company_id=company_id,
+                is_active=True
+            ).distinct())
         elif node.approver_type == 'creator':
-            approvers = [instance.applicant]
+            # 创建人：动态获取申请人
+            if instance.applicant:
+                # P0-1: 校验申请人 company
+                if instance.applicant.company_id != company_id:
+                    logger.error(
+                        f"⚠️ P0 风险：申请人跨公司 - "
+                        f"applicant.company_id={instance.applicant.company_id}, "
+                        f"instance.company_id={company_id}"
+                    )
+                    raise CompanyScopeNotResolved(instance)
+                approvers = [instance.applicant]
         elif node.approver_type == 'department_manager':
-            if instance.applicant.department:
+            # 部门经理：动态获取申请人所在部门的负责人（组织变化自动适配）
+            if instance.applicant and instance.applicant.department:
+                # P0-1: 校验部门 company
+                if hasattr(instance.applicant.department, 'company_id'):
+                    if instance.applicant.department.company_id != company_id:
+                        logger.error(
+                            f"⚠️ P0 风险：申请人部门跨公司 - "
+                            f"department.company_id={instance.applicant.department.company_id}, "
+                            f"instance.company_id={company_id}"
+                        )
+                        raise CompanyScopeNotResolved(instance)
+                
                 # 优先使用部门的 leader（部门负责人）
                 if instance.applicant.department.leader:
-                    approvers = [instance.applicant.department.leader]
+                    leader = instance.applicant.department.leader
+                    # P0-1: 校验部门负责人 company
+                    if leader.company_id != company_id:
+                        logger.error(
+                            f"⚠️ P0 风险：部门负责人跨公司 - "
+                            f"leader.company_id={leader.company_id}, "
+                            f"instance.company_id={company_id}"
+                        )
+                        raise CompanyScopeNotResolved(instance)
+                    approvers = [leader]
                 else:
                     # 如果没有设置部门负责人，则查找角色代码为 department_manager 的用户
                     approvers = list(User.objects.filter(
                         department=instance.applicant.department,
-                        roles__code='department_manager'
+                        roles__code='department_manager',
+                        company_id=company_id,
+                        is_active=True
                     ).distinct())
-        elif node.approver_type == 'custom':
-            # 自定义规则：根据节点名称判断
-            if '印章保管员' in node.name or 'seal_keeper' in node.name.lower():
-                # 动态获取印章保管员（从关联的印章对象中获取）
-                try:
-                    if instance.content_type and instance.content_type.model == 'sealborrowing':
-                        content_obj = instance.content_type.get_object_for_this_type(id=instance.object_id)
-                        if hasattr(content_obj, 'seal') and content_obj.seal:
-                            if hasattr(content_obj.seal, 'keeper') and content_obj.seal.keeper:
-                                approvers = [content_obj.seal.keeper]
-                                logger.info(f'动态获取印章保管员: {content_obj.seal.keeper.username} (印章: {content_obj.seal.seal_name})')
-                except Exception as e:
-                    logger.warning(f'获取印章保管员失败: {str(e)}')
-        # 其他类型可以根据需要扩展
+        elif node.approver_type == 'creator_manager':
+            # 创建人直属上级：动态获取申请人的manager（组织变化自动适配）
+            if not instance.applicant:
+                raise ValueError(
+                    f'审批实例 {instance.instance_number} 的申请人不存在，无法获取 creator_manager 审批人。'
+                    f'节点：{node.name} (ID: {node.id})'
+                )
+            
+            if not instance.applicant.manager:
+                raise ValueError(
+                    f'申请人 {instance.applicant.username} ({instance.applicant.get_full_name() or "无姓名"}) '
+                    f'没有设置直属上级（manager），无法获取审批人。'
+                    f'请在用户管理中为 {instance.applicant.username} 设置 manager 字段。'
+                    f'节点：{node.name} (ID: {node.id})，流程：{instance.workflow.name}'
+                )
+            
+            manager = instance.applicant.manager
+            # P0-1: 只允许 manager.company_id == applicant.company_id
+            if manager.company_id != instance.applicant.company_id:
+                logger.error(
+                    f"⚠️ P0 风险：创建人上级跨公司 - "
+                    f"applicant.company_id={instance.applicant.company_id}, "
+                    f"manager.company_id={manager.company_id}"
+                )
+                raise CompanyScopeNotResolved(instance)
+            
+            approvers = [manager]
+        elif node.approver_type == 'creator_manager_chain':
+            # 创建人多级上级：通过approver_config.levels控制级数（组织变化自动适配）
+            if not instance.applicant:
+                logger.warning('申请人不存在，无法获取多级上级')
+                return []
+            
+            levels = node.approver_config.get('levels')
+            if levels is None:
+                raise ValueError(
+                    f'节点 {node.name} (ID: {node.id}) 使用 creator_manager_chain 类型，'
+                    f'但 approver_config 中未配置 levels 参数。请在 Admin 中配置 approver_config，例如：{{"levels": 2}}'
+                )
+            
+            if not isinstance(levels, int) or levels < 1:
+                raise ValueError(
+                    f'节点 {node.name} (ID: {node.id}) 的 approver_config.levels 无效：{levels}。'
+                    f'levels 必须为正整数（1-10）。'
+                )
+            
+            if levels > 10:
+                raise ValueError(
+                    f'节点 {node.name} (ID: {node.id}) 的 approver_config.levels 超过上限：{levels}。'
+                    f'levels 不能超过 10 级，建议值：2-4 级。'
+                )
+            
+            if not instance.applicant:
+                raise ValueError(
+                    f'审批实例 {instance.instance_number} 的申请人不存在，无法获取 creator_manager_chain 审批人。'
+                    f'节点：{node.name} (ID: {node.id})'
+                )
+            
+            current_user = instance.applicant
+            manager_chain = []
+            missing_level = None
+            
+            for level in range(levels):
+                if not current_user or not current_user.manager:
+                    # 上级链中断
+                    missing_level = level + 1
+                    break
+                
+                current_user = current_user.manager
+                
+                # P0-1: 只允许 manager.company_id == applicant.company_id（链路上每一跳都校验）
+                if current_user.company_id != instance.applicant.company_id:
+                    logger.error(
+                        f"⚠️ P0 风险：上级链第 {level+1} 级跨公司 - "
+                        f"applicant.company_id={instance.applicant.company_id}, "
+                        f"manager_{level+1}.company_id={current_user.company_id}"
+                    )
+                    raise CompanyScopeNotResolved(instance)
+                
+                manager_chain.append(current_user)
+            
+            if missing_level is not None:
+                if missing_level == 1:
+                    raise ValueError(
+                        f'申请人 {instance.applicant.username} ({instance.applicant.get_full_name() or "无姓名"}) '
+                        f'没有设置直属上级（manager），无法获取多级上级审批人。'
+                        f'请在用户管理中为 {instance.applicant.username} 设置 manager 字段。'
+                        f'节点：{node.name} (ID: {node.id})，流程：{instance.workflow.name}，需要 {levels} 级上级'
+                    )
+                else:
+                    raise ValueError(
+                        f'申请人 {instance.applicant.username} 的上级链在第 {missing_level} 级中断（需要 {levels} 级）。'
+                        f'已找到 {len(manager_chain)} 级上级：{" -> ".join([u.username for u in manager_chain])}。'
+                        f'请在用户管理中为上级链中的用户补齐 manager 字段。'
+                        f'节点：{node.name} (ID: {node.id})，流程：{instance.workflow.name}'
+                    )
+            
+            approvers = manager_chain
+        elif node.approver_type in ['user', 'custom']:
+            # 已废弃的类型：直接报错，不允许使用
+            raise ValueError(
+                f'审批人类型 "{node.approver_type}" 已废弃，禁止使用。'
+                f'请使用配置化的审批人类型（role/department/department_manager/creator/creator_manager/creator_manager_chain）。'
+                f'节点ID: {node.id}, 节点名称: {node.name}'
+            )
+        else:
+            logger.warning(f'未知的审批人类型: {node.approver_type}, 节点ID: {node.id}')
         
         return approvers if approvers else []
     
@@ -694,6 +900,8 @@ class ApprovalEngine:
         """
         更新业务对象的状态（根据审批结果）
         
+        治理后：仅保留通用、最小状态记录能力，具体业务逻辑由各 Service 的 handle_approval_result 方法处理
+        
         Args:
             instance: 审批实例
             approval_status: 审批状态 ('approved' 或 'rejected')
@@ -702,70 +910,54 @@ class ApprovalEngine:
             # 获取关联的业务对象
             content_obj = instance.content_type.get_object_for_this_type(id=instance.object_id)
             
-            # 商机：使用 approval_status 字段
-            if instance.content_type.model == 'businessopportunity' and hasattr(content_obj, 'approval_status'):
-                last_record = instance.records.filter(result='approved').order_by('-approval_time').first()
-                if approval_status == 'approved':
-                    if last_record and hasattr(content_obj, 'approver'):
-                        content_obj.approver = last_record.approver
-                    if hasattr(content_obj, 'approved_time'):
-                        content_obj.approved_time = timezone.now()
-                    content_obj.approval_status = 'approved'
-                elif approval_status == 'rejected':
-                    content_obj.approval_status = 'rejected'
-                content_obj.save()
-                logger.info(f'商机审批状态已更新: #{instance.object_id} -> {approval_status}')
+            # 尝试通过 Service 处理审批结果
+            # 根据 content_type 查找对应的 Service
+            service_map = {
+                'loanapplication': 'LoanApprovalService',
+                'sealborrowing': 'SealBorrowingApprovalService',
+                'sealusage': 'SealUsageApprovalService',
+                'businessopportunity': 'OpportunityApprovalService',
+            }
+            
+            service_class_name = service_map.get(instance.content_type.model)
+            if service_class_name:
+                try:
+                    if service_class_name == 'LoanApprovalService':
+                        from backend.apps.administrative_management.services.loan_approval import LoanApprovalService
+                        service = LoanApprovalService()
+                    elif service_class_name == 'SealBorrowingApprovalService':
+                        from backend.apps.administrative_management.services.seal_borrowing_approval import SealBorrowingApprovalService
+                        service = SealBorrowingApprovalService()
+                    elif service_class_name == 'SealUsageApprovalService':
+                        from backend.apps.administrative_management.services.seal_usage_approval import SealUsageApprovalService
+                        service = SealUsageApprovalService()
+                    elif service_class_name == 'OpportunityApprovalService':
+                        from backend.apps.opportunity_management.services.opportunity_approval import OpportunityApprovalService
+                        service = OpportunityApprovalService()
+                    else:
+                        service = None
+                    
+                    if service:
+                        service.handle_approval_result(instance, approval_status)
+                        return
+                except Exception as e:
+                    logger.warning(f'通过 Service 处理审批结果失败，回退到通用逻辑: {str(e)}')
+            
+            # 回退：通用逻辑（仅更新审批人信息和时间，不更新状态）
+            # 注意：Plan 审批由 signal 处理，不在此处处理
+            if instance.content_type.model == 'plan':
+                logger.debug(f'计划审批由 signal 处理，跳过通用逻辑: #{instance.object_id}')
                 return
-            # 根据业务对象类型更新状态（使用 status 字段）
-            elif hasattr(content_obj, 'status'):
-                if approval_status == 'approved':
-                    # 审批通过
-                    # 更新审批人信息
-                    last_record = instance.records.filter(result='approved').order_by('-approval_time').first()
-                    if last_record and hasattr(content_obj, 'approver'):
-                        content_obj.approver = last_record.approver
-                    if hasattr(content_obj, 'approved_time'):
-                        content_obj.approved_time = timezone.now()
-                    
-                    # 根据业务对象类型设置状态
-                    # 印章借用：审批通过后状态变为 'approved'，印章状态变为 'borrowed'
-                    if instance.content_type.model == 'sealborrowing':
-                        content_obj.status = 'approved'
-                        # 更新印章状态
-                        if hasattr(content_obj, 'seal') and content_obj.seal:
-                            if hasattr(content_obj.seal, 'status'):
-                                content_obj.seal.status = 'borrowed'
-                                content_obj.seal.save(update_fields=['status'])
-                    elif instance.content_type.model == 'sealusage':
-                        # 用印申请审批通过，不需要更新状态（用印记录通常不需要状态字段）
-                        # 如果需要，可以在这里添加状态更新逻辑
-                        logger.info(f'用印申请 {content_obj.usage_number} 审批通过')
-                    else:
-                        # 其他业务对象：检查是否有 'approved' 状态
-                        status_choices = dict(getattr(content_obj, 'STATUS_CHOICES', []))
-                        if 'approved' in status_choices:
-                            content_obj.status = 'approved'
-                    
-                    content_obj.save()
-                    logger.info(f'业务对象状态已更新: {instance.content_type.model}#{instance.object_id} -> approved')
-                    
-                elif approval_status == 'rejected':
-                    # 审批驳回
-                    if instance.content_type.model == 'sealborrowing':
-                        content_obj.status = 'rejected'
-                    elif instance.content_type.model == 'sealusage':
-                        # 用印申请审批驳回，不需要更新状态（用印记录通常不需要状态字段）
-                        # 如果需要，可以在这里添加状态更新逻辑
-                        logger.info(f'用印申请 {content_obj.usage_number} 审批驳回')
-                    else:
-                        status_choices = dict(getattr(content_obj, 'STATUS_CHOICES', []))
-                        if 'rejected' in status_choices:
-                            content_obj.status = 'rejected'
-                        elif 'pending_approval' in status_choices:
-                            content_obj.status = 'pending_approval'
-                    
-                    content_obj.save()
-                    logger.info(f'业务对象状态已更新: {instance.content_type.model}#{instance.object_id} -> rejected')
+            
+            # 通用逻辑：仅更新审批人信息和时间
+            if approval_status == 'approved':
+                last_record = instance.records.filter(result='approved').order_by('-approval_time').first()
+                if last_record and hasattr(content_obj, 'approver'):
+                    content_obj.approver = last_record.approver
+                if hasattr(content_obj, 'approved_time'):
+                    content_obj.approved_time = timezone.now()
+                content_obj.save(update_fields=['approver', 'approved_time'] if hasattr(content_obj, 'approver') or hasattr(content_obj, 'approved_time') else [])
+                logger.info(f'业务对象审批信息已更新（通用逻辑）: {instance.content_type.model}#{instance.object_id}')
                         
         except Exception as e:
             # 状态更新失败不应影响审批流程

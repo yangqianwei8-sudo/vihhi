@@ -1625,9 +1625,11 @@ def administrative_archive_create(request):
         is_active=True
     ).order_by('order', 'id')
     
-    # 获取部门列表
+    # 获取部门列表（P0-3: 按当前用户公司过滤）
     departments = Department.objects.filter(is_active=True).order_by('name')
-    
+    if getattr(request.user, 'company_id', None):
+        departments = departments.filter(company_id=request.user.company_id)
+
     # 获取库房列表
     storage_rooms = ArchiveStorageRoom.objects.filter(status='active').order_by('room_name')
     
@@ -1839,11 +1841,13 @@ def archive_borrow_create(request):
         status='archived'
     ).select_related('category', 'archive_department').order_by('-created_time')[:100]
     
-    # 获取部门列表
+    # 获取部门列表（P0-3: 按当前用户公司过滤）
     departments = Department.objects.filter(is_active=True).order_by('name')
-    
+    if getattr(request.user, 'company_id', None):
+        departments = departments.filter(company_id=request.user.company_id)
+
     if request.method == 'POST':
-        form = ArchiveBorrowForm(request.POST)
+        form = ArchiveBorrowForm(request.POST, request=request)
         if form.is_valid():
             borrow = form.save(commit=False)
             borrow.borrower = request.user
@@ -1894,7 +1898,7 @@ def archive_borrow_create(request):
                 initial_data['administrative_archive'] = archive
             except AdministrativeArchive.DoesNotExist:
                 pass
-        form = ArchiveBorrowForm(initial=initial_data)
+        form = ArchiveBorrowForm(initial=initial_data, request=request)
     
     context = {
         'form': form,
@@ -3036,9 +3040,11 @@ def archive_security_permission(request):
         operation_count=Count('archive_operations')
     ).order_by('-operation_count')[:100]
     
-    # 获取部门列表
+    # 获取部门列表（P0-3: 按当前用户公司过滤）
     departments = Department.objects.filter(is_active=True).order_by('name')
-    
+    if getattr(request.user, 'company_id', None):
+        departments = departments.filter(company_id=request.user.company_id)
+
     # 权限统计
     total_users = User.objects.filter(is_active=True).count()
     users_with_permission = User.objects.filter(

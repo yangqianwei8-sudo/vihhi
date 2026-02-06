@@ -30,6 +30,11 @@ JavaScript功能：
 {% endcomment %}
 {% load static %}
 
+{% block module_styles %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/layouts/outgoing-document-list.css' %}">
+{% endblock %}
+
 {% block list_page_title %}发文列表{% endblock %}
 
 {% block list_page_actions %}
@@ -49,37 +54,36 @@ JavaScript功能：
 
 <!-- 表格复选框列 -->
 {% block list_page_table_checkbox_header %}
-<th style="width: 40px;">
+<th class="odl-th-40">
     <input type="checkbox" id="selectAll" title="全选/取消全选">
 </th>
 {% endblock %}
 
 {% block list_page_table_headers %}
-<th style="width: 3%;">#</th>
-<th style="width: 7%;">发文编号</th>
-<th style="width: 13%;">文件标题</th>
-<th style="width: 9%;">收文单位</th>
-<th style="width: 5%;">联系人</th>
-<th style="width: 5%;">联系电话</th>
-<th style="width: 7%;">联系邮箱</th>
-<th style="width: 5%;">阶段</th>
-<th style="width: 7%;">文件分类</th>
-<th style="width: 8%;">报送方式</th>
-<th style="width: 5%;">状态</th>
-<th style="width: 4%;">优先级</th>
-<th style="width: 5%;">负责人</th>
-<th style="width: 7%;">创建时间</th>
+<th class="odl-th-3">#</th>
+<th class="odl-th-7">发文编号</th>
+<th class="odl-th-13">文件标题</th>
+<th class="odl-th-9">收文单位</th>
+<th class="odl-th-5">联系人</th>
+<th class="odl-th-5">联系电话</th>
+<th class="odl-th-7">联系邮箱</th>
+<th class="odl-th-5">阶段</th>
+<th class="odl-th-7">文件分类</th>
+<th class="odl-th-8">报送方式</th>
+<th class="odl-th-5">状态</th>
+<th class="odl-th-4">优先级</th>
+<th class="odl-th-5">负责人</th>
+<th class="odl-th-7">创建时间</th>
 {% endblock %}
 {% block list_page_table_actions_header %}
-<th style="width: 4%;">
+<th class="odl-th-4">
     操作
-    <span id="columnSettingsBtn"
+    <span id="columnSettingsBtn" class="odl-btn-column-settings"
           data-bs-toggle="modal"
           data-bs-target="#columnSettingsModal"
           aria-label="设置表格字段"
-          title="设置表格字段"
-          style="cursor: pointer; color: #000000 !important; font-size: 16px; vertical-align: middle; margin-left: 8px; display: inline-block;">
-        <i class="bi bi-gear" style="color: #000000 !important;"></i>
+          title="设置表格字段">
+        <i class="bi bi-gear"></i>
     </span>
 </th>
 {% endblock %}
@@ -185,7 +189,7 @@ JavaScript功能：
         </a>
         <span class="action-separator">|</span>
         <a href="{% url 'delivery_pages:outgoing_document_delete' item.id %}" 
-           class="action-delete" title="删除" onclick="return confirm('确定要删除这条发文吗？');">
+           class="action-delete" title="删除" data-action="confirm-before-navigate" data-confirm-message="确定要删除这条发文吗？">
             <i class="bi bi-trash"></i>
         </a>
         {% endif %}

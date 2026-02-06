@@ -164,14 +164,12 @@ class StrategicGoalViewSet(AuditMixin, viewsets.ModelViewSet):
             raise PermissionDenied(f"缺少审批权限: {perm}")
 
     def _get_profile_org(self):
-        """获取当前用户的公司/部门信息"""
+        """P0-2: 获取用户公司和部门（改为使用 user.company）"""
         user = getattr(self.request, "user", None)
         if not user or not user.is_authenticated:
             return None, None
-        profile = getattr(user, "profile", None)
-        if not profile:
-            return None, None
-        return getattr(profile, "company", None), getattr(profile, "department", None)
+        # P0-2: 直接使用 user.company 和 user.department
+        return user.company, user.department
 
     def get_queryset(self):
         """获取查询集"""
@@ -184,7 +182,8 @@ class StrategicGoalViewSet(AuditMixin, viewsets.ModelViewSet):
         company, _dept = self._get_profile_org()
         if not company:
             return qs.none()
-        qs = qs.filter(company=company)
+        # StrategicGoal 无 company 字段，按部门公司隔离；responsible_department 为空的记录普通用户不可见
+        qs = qs.filter(responsible_department__company_id=company.id)
         
         # A3-3-7: 使用统一的筛选逻辑
         spec = ListFilterSpec.from_params(self.request.query_params, allow_overdue=False)
@@ -195,7 +194,7 @@ class StrategicGoalViewSet(AuditMixin, viewsets.ModelViewSet):
         return qs.order_by("-created_time", "-id")
 
     def perform_create(self, serializer):
-        """创建目标时自动赋值 company/org_department"""
+        """创建目标时自动赋值 responsible_department（StrategicGoal 无 company 字段）"""
         user = self.request.user
         company, dept = self._get_profile_org()
 
@@ -214,38 +213,28 @@ class StrategicGoalViewSet(AuditMixin, viewsets.ModelViewSet):
             raise ValidationError(f'负责人当前有 {owner_blocked} 个卡住事项，请先处理后再创建新目标。')
 
         extra = {}
-        # 普通用户：强制继承（防止前端乱传穿透）
         if not user.is_superuser:
             if not company:
                 raise PermissionDenied("用户未绑定公司，禁止创建。")
-            extra["company"] = company
-            extra["org_department"] = dept
+            if dept and not serializer.validated_data.get("responsible_department"):
+                extra["responsible_department"] = dept
             serializer.save(**extra)
             return
 
-        # 超管：允许代录，但若前端未传则用 profile 默认
-        if company and not serializer.validated_data.get("company"):
-            extra["company"] = company
-        if dept and not serializer.validated_data.get("org_department"):
-            extra["org_department"] = dept
+        if dept and not serializer.validated_data.get("responsible_department"):
+            extra["responsible_department"] = dept
         serializer.save(**extra)
 
-    ORG_FIELDS = ("company", "org_department")
+    ORG_FIELDS = ("responsible_department",)
 
     def _reject_org_change_if_needed(self, instance, serializer):
-        """检查并拒绝普通用户修改归属字段"""
+        """检查并拒绝普通用户修改归属字段（StrategicGoal 仅 responsible_department）"""
         user = self.request.user
         if user.is_superuser:
-            return  # 超管允许
-
-        # 普通用户禁止改归属
-        incoming_company = serializer.validated_data.get("company", None)
-        incoming_dept = serializer.validated_data.get("org_department", None)
-
-        if incoming_company and instance.company_id != incoming_company.id:
-            raise PermissionDenied("禁止修改 company")
-        if incoming_dept and instance.org_department_id != incoming_dept.id:
-            raise PermissionDenied("禁止修改 org_department")
+            return
+        incoming_dept = serializer.validated_data.get("responsible_department", None)
+        if incoming_dept is not None and instance.responsible_department_id != (incoming_dept.id if incoming_dept else None):
+            raise PermissionDenied("禁止修改所属部门")
 
     def perform_update(self, serializer):
         """更新目标时保护归属字段"""
@@ -708,6 +697,13 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
     serializer_class = PlanSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+
+    def get_queryset(self):
+        qs = Plan.objects.all()
+        if getattr(self.request.user, 'company_id', None):
+            qs = qs.filter(company_id=self.request.user.company_id)
+        return qs
+
     # 修复：plan_type不是数据库字段，使用level字段替代
     # plan_type字段已在P2-1迁移中被level字段替代，保留向后兼容
     filterset_fields = ['status', 'level', 'plan_period']
@@ -774,14 +770,12 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
             raise PermissionDenied(f"缺少审批权限: {perm}")
 
     def _get_profile_org(self):
-        """获取当前用户的公司/部门信息"""
+        """P0-2: 获取用户公司和部门（改为使用 user.company）"""
         user = getattr(self.request, "user", None)
         if not user or not user.is_authenticated:
             return None, None
-        profile = getattr(user, "profile", None)
-        if not profile:
-            return None, None
-        return getattr(profile, "company", None), getattr(profile, "department", None)
+        # P0-2: 直接使用 user.company 和 user.department
+        return user.company, user.department
 
     def get_queryset(self):
         """获取查询集"""

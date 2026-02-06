@@ -3,6 +3,7 @@
 {% load static %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/opportunity/opportunity-detail.css' %}">
 {% endblock %}
 
 {% block pm_title %}商机详情{% endblock %}
@@ -360,14 +361,14 @@
                 </div>
                 {% endif %}
                 {% if opportunity.win_reason %}
-                <div class="info-item" style="grid-column: 1 / -1;">
+                <div class="info-item od-grid-full">
                     <span class="info-label">赢单原因</span>
                     <span class="info-value">{{ opportunity.win_reason|linebreaks }}</span>
                 </div>
                 {% endif %}
                 {% else %}
                 {% if opportunity.loss_reason %}
-                <div class="info-item" style="grid-column: 1 / -1;">
+                <div class="info-item od-grid-full">
                     <span class="info-label">输单原因</span>
                     <span class="info-value">{{ opportunity.loss_reason|linebreaks }}</span>
                 </div>
@@ -482,7 +483,7 @@
             </div>
             {% else %}
             <div class="text-center text-muted py-4">
-                <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                <i class="bi bi-inbox od-empty-icon"></i>
                 <p class="mt-3">暂无跟进记录</p>
                 <a href="{% url 'opportunity_pages:opportunity_followup_create' opportunity.id %}"
                    class="btn btn-primary mt-2">
@@ -564,13 +565,13 @@
                 <table class="table table-hover table-sm">
                     <thead>
                         <tr>
-                            <th style="width: 100px;">版本号</th>
-                            <th style="width: 100px;">版本类型</th>
-                            <th style="width: 120px; text-align: right;">报价金额（万元）</th>
-                            <th style="width: 100px;">报价模式</th>
-                            <th style="width: 150px;">创建人</th>
-                            <th style="width: 150px;">创建时间</th>
-                            <th style="width: 120px;">操作</th>
+                            <th class="od-th-w-100">版本号</th>
+                            <th class="od-th-w-100">版本类型</th>
+                            <th class="od-th-w-120 od-th-right">报价金额（万元）</th>
+                            <th class="od-th-w-100">报价模式</th>
+                            <th class="od-th-w-150">创建人</th>
+                            <th class="od-th-w-150">创建时间</th>
+                            <th class="od-th-w-120">操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -582,7 +583,7 @@
                                     {{ quotation.get_version_type_display }}
                                 </span>
                             </td>
-                            <td style="text-align: right;" class="info-value-numeric">
+                            <td class="info-value-numeric od-td-right">
                                 {% if quotation.final_quotation %}
                                     {{ quotation.final_quotation|floatformat:2 }}
                                 {% elif quotation.service_fee %}
@@ -630,7 +631,7 @@
             {% endif %}
             {% else %}
             <div class="text-center text-muted py-4">
-                <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                <i class="bi bi-inbox od-empty-icon"></i>
                 <p class="mt-3">暂无报价记录</p>
                 {% if can_edit %}
                 <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?opportunity_id={{ opportunity.id }}"

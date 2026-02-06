@@ -1,0 +1,149 @@
+{% comment %}
+  侧边栏模板片段
+  注意：sidebar_v2_fixed.css 应在 base 模板的样式块中引入（如 module_sidebar_styles），
+  依赖 --navbar-height 变量，需确保已引入 core/variables.css
+{% endcomment %}
+
+<aside class="vh-sb" aria-label="左侧栏（全屏固定）">
+  <div class="vh-sb__top">
+    <div class="vh-sb__topInner">
+      <div class="vh-sb__titleWrap">
+        {% if sidebar_title %}
+          <div class="vh-sb__title">{{ sidebar_title }}</div>
+        {% endif %}
+        {% if sidebar_subtitle %}
+          <div class="vh-sb__sub">{{ sidebar_subtitle }}</div>
+        {% endif %}
+      </div>
+      <button type="button" class="vh-sb__expandAll" data-sb-expand-all title="展开/收起全部菜单" aria-label="展开或收起全部菜单">
+        <span class="vh-sb__expandAll-icon" aria-hidden="true">⊞</span>
+      </button>
+
+      {% block sidebar_top_extra %}{% endblock %}
+    </div>
+  </div>
+
+  <nav class="vh-sb__nav">
+    {% with menu_items=sidebar_nav|default:sidebar_menu|default:None %}
+      {% if menu_items %}
+        {% for item in menu_items %}
+          {% if item.children %}
+            <div class="vh-sb__parent {% if item.expanded or item.active %}is-open{% endif %}" data-sb-parent data-sb-key="{% if item.key %}{{ item.key }}{% elif item.code %}{{ item.code }}{% elif item.id %}{{ item.id }}{% else %}{{ forloop.counter }}{% endif %}">
+              <button type="button"
+                      class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}"
+                      data-sb-toggle
+                      aria-expanded="{% if item.expanded or item.active %}true{% else %}false{% endif %}">
+                <span class="vh-sb__icon">
+                  {% if item.icon and item.icon|slice:":3" == "bi-" %}
+                    <i class="bi {{ item.icon }}"></i>
+                  {% elif item.icon and item.icon|slice:":3" == "fa-" %}
+                    <i class="fas {{ item.icon }}"></i>
+                  {% elif item.icon %}
+                    {{ item.icon|default:"▢" }}
+                  {% else %}
+                    ▢
+                  {% endif %}
+                </span>
+                <span class="vh-sb__label">{{ item.label }}</span>
+                <span class="vh-sb__chev" aria-hidden="true">▸</span>
+              </button>
+
+              <div class="vh-sb__children" data-sb-children>
+                {% for child in item.children %}
+                  {% if child.url %}
+                    <a href="{{ child.url }}" class="vh-sb__child {% if child.active %}is-active{% endif %}" {% if child.active %}aria-current="page"{% endif %}>
+                      <span class="vh-sb__icon">
+                        {% if child.icon and child.icon|slice:":3" == "bi-" %}
+                          <i class="bi {{ child.icon }}"></i>
+                        {% elif child.icon and child.icon|slice:":3" == "fa-" %}
+                          <i class="fas {{ child.icon }}"></i>
+                        {% elif child.icon %}
+                          {{ child.icon|default:"·" }}
+                        {% else %}
+                          ·
+                        {% endif %}
+                      </span>
+                      <span class="vh-sb__label">{{ child.label }}</span>
+                    </a>
+                  {% else %}
+                    <span class="vh-sb__child is-disabled" aria-disabled="true">
+                      <span class="vh-sb__icon">
+                        {% if child.icon and child.icon|slice:":3" == "bi-" %}
+                          <i class="bi {{ child.icon }}"></i>
+                        {% elif child.icon and child.icon|slice:":3" == "fa-" %}
+                          <i class="fas {{ child.icon }}"></i>
+                        {% elif child.icon %}
+                          {{ child.icon|default:"·" }}
+                        {% else %}
+                          ·
+                        {% endif %}
+                      </span>
+                      <span class="vh-sb__label">{{ child.label }}</span>
+                    </span>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          {% else %}
+            {% if item.url %}
+              <a href="{{ item.url }}" class="vh-sb__item {% if item.active %}is-active{% endif %}" {% if item.active %}aria-current="page"{% endif %}>
+                <span class="vh-sb__icon">
+                  {% if item.icon and item.icon|slice:":3" == "bi-" %}
+                    <i class="bi {{ item.icon }}"></i>
+                  {% elif item.icon and item.icon|slice:":3" == "fa-" %}
+                    <i class="fas {{ item.icon }}"></i>
+                  {% elif item.icon %}
+                    {{ item.icon|default:"▢" }}
+                  {% else %}
+                    ▢
+                  {% endif %}
+                </span>
+                <span class="vh-sb__label">{{ item.label }}</span>
+                {% if item.badge %}
+                  <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
+                    {{ item.badge }}
+                  </span>
+                {% endif %}
+              </a>
+            {% else %}
+              <span class="vh-sb__item is-disabled" aria-disabled="true">
+                <span class="vh-sb__icon">
+                  {% if item.icon and item.icon|slice:":3" == "bi-" %}
+                    <i class="bi {{ item.icon }}"></i>
+                  {% elif item.icon and item.icon|slice:":3" == "fa-" %}
+                    <i class="fas {{ item.icon }}"></i>
+                  {% elif item.icon %}
+                    {{ item.icon|default:"▢" }}
+                  {% else %}
+                    ▢
+                  {% endif %}
+                </span>
+                <span class="vh-sb__label">{{ item.label }}</span>
+                {% if item.badge %}
+                  <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
+                    {{ item.badge }}
+                  </span>
+                {% endif %}
+              </span>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <a href="/" class="vh-sb__item is-active">
+          <span class="vh-sb__icon">▣</span>
+          <span class="vh-sb__label">首页</span>
+        </a>
+      {% endif %}
+    {% endwith %}
+
+    {% block sidebar_nav_extra %}{% endblock %}
+  </nav>
+
+  <div class="vh-sb__bottom">
+    <button type="button" class="vh-sb__mini" aria-label="帮助">帮助</button>
+    <button type="button" class="vh-sb__mini" aria-label="设置">设置</button>
+    <button type="button" class="vh-sb__mini" data-action="open-feedback-modal" aria-label="打开反馈">反馈</button>
+
+    {% block sidebar_bottom_extra %}{% endblock %}
+  </div>
+</aside>

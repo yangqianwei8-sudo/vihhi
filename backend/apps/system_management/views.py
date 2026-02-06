@@ -135,10 +135,25 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     serializer_class = DepartmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        qs = Department.objects.all()
+        if getattr(self.request.user, 'company_id', None):
+            qs = qs.filter(company_id=self.request.user.company_id)
+        return qs.order_by('order', 'name')
+
+
 class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Role.objects.all()
+        cid = getattr(self.request.user, 'company_id', None)
+        if cid is not None:
+            from django.db.models import Q
+            qs = qs.filter(Q(company_id__isnull=True) | Q(company_id=cid))
+        return qs.order_by('name')
 
 class DataDictionaryViewSet(viewsets.ModelViewSet):
     queryset = DataDictionary.objects.all()

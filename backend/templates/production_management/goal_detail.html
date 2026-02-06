@@ -1,0 +1,79 @@
+{% extends "shared/two_column_layout_base.html" %}
+{% load static %}
+
+{% block pm_title %}目标详情{% endblock pm_title %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'production_pages:goal_list' %}">目标列表</a></li>
+<li class="breadcrumb-item active" aria-current="page">目标详情</li>
+{% endblock breadcrumb_items %}
+
+{% block pm_actions %}
+<a href="{% url 'production_pages:goal_edit' goal.id %}" class="btn btn-primary btn-sm">
+  <i class="bi bi-pencil"></i> 编辑
+</a>
+<a href="{% url 'production_pages:goal_list' %}" class="btn btn-outline-secondary btn-sm">
+  <i class="bi bi-arrow-left"></i> 返回列表
+</a>
+{% endblock pm_actions %}
+
+{% block pm_content %}
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title">{{ goal.title }}</h5>
+    
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <strong>归属人：</strong>
+        {{ goal.owner.get_full_name|default:goal.owner.username }}
+      </div>
+      <div class="col-md-6">
+        <strong>状态：</strong>
+        {% if goal.status == 'not_started' %}
+          <span class="badge bg-secondary">未开始</span>
+        {% elif goal.status == 'in_progress' %}
+          <span class="badge bg-primary">进行中</span>
+        {% elif goal.status == 'completed' %}
+          <span class="badge bg-success">已完成</span>
+        {% elif goal.status == 'terminated' %}
+          <span class="badge bg-danger">已终止</span>
+        {% else %}
+          <span class="badge">{{ goal.get_status_display }}</span>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <strong>开始日期：</strong>
+        {{ goal.start_date|date:"Y-m-d"|default:"未设置" }}
+      </div>
+      <div class="col-md-6">
+        <strong>结束日期：</strong>
+        {{ goal.end_date|date:"Y-m-d"|default:"未设置" }}
+      </div>
+    </div>
+    
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <strong>创建人：</strong>
+        {{ goal.created_by.get_full_name|default:goal.created_by.username|default:"-" }}
+      </div>
+      <div class="col-md-6">
+        <strong>创建时间：</strong>
+        {{ goal.created_at|date:"Y-m-d H:i" }}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# 预留行动入口 #}
+<div class="card mt-3">
+  <div class="card-header">
+    <h6 class="mb-0">行动管理</h6>
+  </div>
+  <div class="card-body">
+    <p class="text-muted mb-0">行动管理功能待开发...</p>
+  </div>
+</div>
+{% endblock pm_content %}

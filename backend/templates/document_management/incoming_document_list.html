@@ -9,6 +9,7 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/document/incoming-document-list.css' %}">
 <style>
 .list-page-container {
     padding: 12px !important;
@@ -70,23 +71,23 @@
                        placeholder="收文编号、标题、发文单位、联系人..." 
                        value="{{ search_query }}">
             </div>
-            <div style="width: 130px;">
+            <div class="idc-filter-stage-w">
                 <label class="form-label small mb-1">阶段</label>
-                <select name="stage" class="form-select form-select-sm" id="stage_filter" onchange="updateCategoryOptions()">
+                <select name="stage" class="form-select form-select-sm" id="stage_filter">
                     <option value="all" {% if stage_filter == 'all' %}selected{% endif %}>全部</option>
                     {% for code, label in stage_choices %}
                     <option value="{{ code }}" {% if stage_filter == code %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div style="width: 150px;">
+            <div class="idc-filter-category-w">
                 <label class="form-label small mb-1">文件分类</label>
                 <select name="category" class="form-select form-select-sm" id="category_filter">
                     <option value="all" {% if category_filter == 'all' %}selected{% endif %}>全部</option>
                     {% for category in categories %}
                     <option value="{{ category.id }}" data-stage="{{ category.stage }}" 
                             {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}
-                            style="{% if stage_filter != 'all' and category.stage != stage_filter %}display: none;{% endif %}">
+                            class="{% if stage_filter != 'all' and category.stage != stage_filter %}d-none{% endif %}">
                         {{ category.name }}
                     </option>
                     {% endfor %}
@@ -109,15 +110,15 @@
             <table class="table table-hover table-bordered">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 4%;">#</th>
-                        <th style="width: 10%;">收文编号</th>
-                        <th style="width: 18%;">文件标题</th>
-                        <th style="width: 12%;">发文单位</th>
-                        <th style="width: 8%;">阶段</th>
-                        <th style="width: 10%;">文件分类</th>
-                        <th style="width: 8%;">收文日期</th>
-                        <th style="width: 8%;">处理人</th>
-                        <th style="width: 10%;">操作</th>
+                        <th class="idc-th-4">#</th>
+                        <th class="idc-th-10">收文编号</th>
+                        <th class="idc-th-18">文件标题</th>
+                        <th class="idc-th-12">发文单位</th>
+                        <th class="idc-th-8">阶段</th>
+                        <th class="idc-th-10">文件分类</th>
+                        <th class="idc-th-8">收文日期</th>
+                        <th class="idc-th-8">处理人</th>
+                        <th class="idc-th-10">操作</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -218,31 +219,5 @@
     {% endif %}
 </div>
 
-<script>
-// 更新文件分类选项（根据选择的阶段）
-function updateCategoryOptions() {
-    const stageSelect = document.getElementById('stage_filter');
-    const categorySelect = document.getElementById('category_filter');
-    const selectedStage = stageSelect.value;
-    
-    // 显示/隐藏分类选项
-    const options = categorySelect.querySelectorAll('option[data-stage]');
-    options.forEach(option => {
-        if (selectedStage === 'all' || option.getAttribute('data-stage') === selectedStage) {
-            option.style.display = '';
-        } else {
-            option.style.display = 'none';
-            // 如果当前选中的分类不在当前阶段，重置为"全部"
-            if (option.selected && option.getAttribute('data-stage') !== selectedStage) {
-                categorySelect.value = 'all';
-            }
-        }
-    });
-}
-
-// 页面加载时初始化
-document.addEventListener('DOMContentLoaded', function() {
-    updateCategoryOptions();
-});
-</script>
+<script src="{% static 'js/document/incoming_document_list.js' %}"></script>
 {% endblock %}

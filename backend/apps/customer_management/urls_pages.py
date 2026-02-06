@@ -16,7 +16,6 @@ urlpatterns = [
     path("customers/<int:client_id>/", views_pages.customer_detail, name="customer_detail"),
     path("customers/<int:client_id>/edit/", views_pages.customer_edit, name="customer_edit"),
     path("customers/<int:client_id>/delete/", views_pages.customer_delete, name="customer_delete"),
-    path("customers/<int:client_id>/submit-approval/", views_pages.customer_submit_approval, name="customer_submit_approval"),
     path("customers/<int:client_id>/execution-records/export/", views_pages.execution_records_export, name="execution_records_export"),
     path("customers/batch-delete/", views_pages.customer_batch_delete, name="customer_batch_delete"),
     path("customers/export/", views_pages.customer_export, name="customer_export"),

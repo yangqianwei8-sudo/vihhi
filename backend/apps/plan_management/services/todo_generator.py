@@ -105,7 +105,8 @@ def generate_goal_decomposition_todo(goal: StrategicGoal) -> List:
         recipients = User.objects.filter(is_active=True)
         # 公司隔离（如果有company字段）
         if hasattr(goal, 'company') and goal.company:
-            recipients = recipients.filter(profile__company=goal.company)
+            # P0-2: 改为使用 user.company
+            recipients = recipients.filter(company=goal.company)
         
         # 排除创建人
         recipients = recipients.exclude(id=goal.created_by_id)
@@ -523,7 +524,8 @@ def generate_monthly_personal_plan_todos(plan: Plan) -> List:
         recipients = User.objects.filter(is_active=True)
         # 公司隔离（如果有company字段）
         if hasattr(plan, 'company') and plan.company:
-            recipients = recipients.filter(profile__company=plan.company)
+            # P0-2: 改为使用 user.company
+            recipients = recipients.filter(company=plan.company)
         
         # 排除创建人
         recipients = recipients.exclude(id=plan.created_by_id)

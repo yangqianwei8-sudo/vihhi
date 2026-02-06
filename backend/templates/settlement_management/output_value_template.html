@@ -1,8 +1,10 @@
 {% extends "shared/two_column_layout_base.html" %}
+{% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/settlement/output-value-template.css' %}">
 <style>
     .output-value-nav {
         background: #fff;
@@ -170,7 +172,7 @@
 <div class="container-fluid py-4">
 
     <div class="center-hero mb-4">
-        <div style="position: relative; z-index: 1;">
+        <div class="ovt-hero-inner">
             <h1 class="hero-title">产值管理</h1>
             <p class="hero-subtitle">配置和管理产值计算模板、查看产值记录和统计分析。</p>
         </div>
@@ -203,10 +205,10 @@
     </div>
 
     <div class="section-block" id="stages">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div class="ovt-section-head">
             <div>
-                <h2 class="section-title" style="margin: 0;">产值阶段配置</h2>
-                <p class="section-desc" style="margin: 8px 0 0 0;">查看和编辑所有产值阶段的配置详情，包括里程碑和事件的设置。</p>
+                <h2 class="section-title ovt-section-title">产值阶段配置</h2>
+                <p class="section-desc ovt-section-desc">查看和编辑所有产值阶段的配置详情，包括里程碑和事件的设置。</p>
             </div>
             <div>
                 <a href="{% url 'admin:output_value_management_outputvaluestage_changelist' %}" class="btn btn-primary me-2" target="_blank">管理阶段</a>
@@ -226,7 +228,7 @@
                     </div>
                 </div>
                 <div>
-                    <a href="{% url 'admin:output_value_management_outputvaluestage_change' stage.id %}" class="btn btn-outline-primary" target="_blank" style="background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: #fff; font-size: 12px; padding: 6px 12px;">编辑阶段</a>
+                    <a href="{% url 'admin:output_value_management_outputvaluestage_change' stage.id %}" class="btn btn-outline-primary ovt-btn-stage" target="_blank">编辑阶段</a>
                 </div>
             </div>
 
@@ -237,12 +239,12 @@
                         <span class="milestone-name">{{ milestone.name }}</span>
                         <span class="milestone-percentage">里程碑比例：{{ milestone.percentage }}%</span>
                     </div>
-                    <a href="{% url 'admin:output_value_management_outputvaluemilestone_change' milestone.id %}" class="btn btn-outline-primary" target="_blank" style="font-size: 12px; padding: 4px 10px;">编辑里程碑</a>
+                    <a href="{% url 'admin:output_value_management_outputvaluemilestone_change' milestone.id %}" class="btn btn-outline-primary ovt-btn-milestone" target="_blank">编辑里程碑</a>
                 </div>
 
                 <div class="event-list">
                     {% for event in milestone.events %}
-                    <div class="event-item" style="position: relative;">
+                    <div class="event-item ovt-event-item">
                         <div class="event-name">{{ event.name }}</div>
                         <div class="event-details">
                             <span>事件比例：{{ event.percentage }}%</span>
@@ -250,7 +252,7 @@
                             <span>责任岗位：{{ event.role }}</span>
                             {% if event.trigger_condition %}<span>|</span><span>触发条件：{{ event.trigger_condition }}</span>{% endif %}
                         </div>
-                        <a href="{% url 'admin:output_value_management_outputvalueevent_change' event.id %}" class="btn btn-outline-primary" target="_blank" style="position: absolute; top: 8px; right: 8px; font-size: 11px; padding: 3px 8px; background: #fff;">编辑</a>
+                        <a href="{% url 'admin:output_value_management_outputvalueevent_change' event.id %}" class="btn btn-outline-primary ovt-btn-event" target="_blank">编辑</a>
                     </div>
                     {% endfor %}
                 </div>
@@ -258,7 +260,7 @@
             {% endfor %}
         </div>
         {% empty %}
-        <div class="text-center py-5" style="color: #6b7280;">
+        <div class="text-center py-5 ovt-empty-msg">
             <p>暂无产值模板配置数据。</p>
             <p class="small">请运行 <code>python manage.py seed_output_value_template</code> 初始化模板数据。</p>
         </div>

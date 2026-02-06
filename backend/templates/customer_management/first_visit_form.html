@@ -6,22 +6,41 @@
 {% block form_title %}{{ page_title|default:"创建首次拜访" }}{% endblock form_title %}
 {% block form_subtitle %}{{ form_page_subtitle_text|default:"请填写首次拜访信息（不需要选择联系人）" }}{% endblock form_subtitle %}
 
-{% block form_header_actions %}
-  {% if list_url %}
-    <a href="{{ list_url }}" class="btn btn-secondary">返回列表</a>
-  {% elif cancel_url_name %}
-    <a href="{% url cancel_url_name %}" class="btn btn-secondary">返回列表</a>
-  {% else %}
-    <a href="{% url 'customer_pages:customer_visit' %}" class="btn btn-secondary">返回列表</a>
-  {% endif %}
-{% endblock form_header_actions %}
-
 {% block form_basic_info_card %}
 <div class="form-card form-card-basic-info">
   <div class="form-card-header">
     <h3 class="form-card-title">
       <i class="fas fa-info-circle"></i>
       基本信息
+    </h3>
+  </div>
+  <div class="form-card-body">
+    <div class="row g-3">
+      <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+        <label for="{{ form.department.id_for_label }}" class="form-label">{{ form.department.label }}{% if form.department.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+        {{ form.department }}
+        {% if form.department.errors %}<div class="invalid-feedback d-block">{{ form.department.errors }}</div>{% endif %}
+      </div>
+      <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+        <label for="{{ form.responsible_user.id_for_label }}" class="form-label">{{ form.responsible_user.label }}{% if form.responsible_user.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+        {{ form.responsible_user }}
+        {% if form.responsible_user.errors %}<div class="invalid-feedback d-block">{{ form.responsible_user.errors }}</div>{% endif %}
+      </div>
+      <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+        <label class="form-label">表单编号</label>
+        <p class="form-control-plaintext text-muted mb-0">保存后自动生成</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock form_basic_info_card %}
+
+{% block form_other_fields_card %}
+<div class="form-card form-card-other-fields">
+  <div class="form-card-header">
+    <h3 class="form-card-title">
+      <i class="fas fa-list-alt"></i>
+      详细信息
     </h3>
   </div>
   <div class="form-card-body">
@@ -62,31 +81,6 @@
     </div>
   </div>
 </div>
-{% endblock form_basic_info_card %}
-
-{% block form_other_fields_card %}
-<div class="form-card form-card-other-fields">
-  <div class="form-card-header">
-    <h3 class="form-card-title">
-      <i class="fas fa-list-alt"></i>
-      关联信息
-    </h3>
-  </div>
-  <div class="form-card-body">
-    {% block form_fields %}
-    <div class="row g-3">
-      <div class="col-12 form-field-wrapper">
-        <label for="{{ form.related_opportunity.id_for_label }}" class="form-label">{{ form.related_opportunity.label }}</label>
-        {{ form.related_opportunity }}
-        {% if form.related_opportunity.errors %}
-        <div class="invalid-feedback d-block">{{ form.related_opportunity.errors }}</div>
-        {% endif %}
-        <div class="form-text text-muted">请先选择客户后，再选择关联商机（可选）</div>
-      </div>
-    </div>
-    {% endblock form_fields %}
-  </div>
-</div>
 {% endblock form_other_fields_card %}
 
 {% block form_actions %}
@@ -100,10 +94,8 @@
 (function() {
   document.addEventListener('DOMContentLoaded', function() {
     var clientsWithAddress = {{ clients_with_address_json|safe }};
-    var clientsOpportunities = {{ clients_opportunities_json|safe }};
     var clientSelect = document.getElementById('id_client');
     var locationInput = document.getElementById('id_location');
-    var opportunitySelect = document.getElementById('id_related_opportunity');
 
     if (clientSelect && locationInput) {
       clientSelect.addEventListener('change', function() {
@@ -112,18 +104,6 @@
           locationInput.value = clientsWithAddress[clientId];
         } else {
           locationInput.value = '';
-        }
-
-        if (opportunitySelect) {
-          opportunitySelect.innerHTML = '<option value="">-- 请先选择客户 (可选) --</option>';
-          if (clientId && clientsOpportunities[clientId]) {
-            clientsOpportunities[clientId].forEach(function(opp) {
-              var option = document.createElement('option');
-              option.value = opp.id;
-              option.textContent = opp.name;
-              opportunitySelect.appendChild(option);
-            });
-          }
         }
       });
     }

@@ -1,108 +1,56 @@
+{# 创建客户备案：继承 create_form_base，基本信息固定三字段（所属部门、负责人、表单编号），其余在详细信息 #}
 {% extends "shared/create_form_base.html" %}
 {% load static %}
-
-{# 创建客户备案：统一使用 create_form_base.html #}
 
 {% block form_title %}{{ page_title|default:"创建客户备案" }}{% endblock form_title %}
 {% block form_subtitle %}{{ form_page_subtitle_text|default:"请填写客户备案信息" }}{% endblock form_subtitle %}
 
-{% block form_header_actions %}
-  {% if list_url %}
-    <a href="{{ list_url }}" class="btn btn-secondary">返回列表</a>
-  {% elif cancel_url_name %}
-    <a href="{% url cancel_url_name %}" class="btn btn-secondary">返回列表</a>
-  {% else %}
-    <a href="{% url 'customer_pages:customer_lead_list' %}" class="btn btn-secondary">返回列表</a>
-  {% endif %}
-{% endblock form_header_actions %}
-
-{% block form_basic_info_card %}
-<div class="form-card form-card-basic-info">
-  <div class="form-card-header">
-    <h3 class="form-card-title">
-      <i class="fas fa-info-circle"></i>
-      基本信息
-    </h3>
+{% block form_fields %}
+  {# 详细信息：客户备案业务字段（基模已渲染所属部门、负责人、表单编号） #}
+  <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+    <label for="{{ form.client.id_for_label }}" class="form-label">{{ form.client.label }}{% if form.client.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+    {{ form.client }}
+    {% if form.client.errors %}<div class="invalid-feedback d-block">{{ form.client.errors }}</div>{% endif %}
   </div>
-  <div class="form-card-body">
-    {# 第一排：客户、备案日期、备案类型（一行3个） #}
-    <div class="row g-3">
-      <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
-        <label for="{{ form.client.id_for_label }}" class="form-label">{{ form.client.label }}{% if form.client.field.required %}<span class="text-danger">*</span>{% endif %}</label>
-        {{ form.client }}
-        {% if form.client.errors %}<div class="invalid-feedback d-block">{{ form.client.errors }}</div>{% endif %}
-      </div>
-      <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
-        <label for="{{ form.filing_date.id_for_label }}" class="form-label">{{ form.filing_date.label }}{% if form.filing_date.field.required %}<span class="text-danger">*</span>{% endif %}</label>
-        {{ form.filing_date }}
-        {% if form.filing_date.errors %}<div class="invalid-feedback d-block">{{ form.filing_date.errors }}</div>{% endif %}
-      </div>
-      <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
-        <label for="{{ form.filing_type.id_for_label }}" class="form-label">{{ form.filing_type.label }}{% if form.filing_type.field.required %}<span class="text-danger">*</span>{% endif %}</label>
-        {{ form.filing_type }}
-        {% if form.filing_type.errors %}<div class="invalid-feedback d-block">{{ form.filing_type.errors }}</div>{% endif %}
-      </div>
-    </div>
-    {# 第二排：备案编号、关联商机（一行2个） #}
-    <div class="row g-3 mt-1">
-      <div class="col-12 col-md-6 form-field-wrapper">
-        <label for="{{ form.filing_number.id_for_label }}" class="form-label">{{ form.filing_number.label }}</label>
-        {{ form.filing_number }}
-        {% if form.filing_number.errors %}<div class="invalid-feedback d-block">{{ form.filing_number.errors }}</div>{% endif %}
-        {% if form.filing_number.help_text %}<div class="form-text">{{ form.filing_number.help_text }}</div>{% endif %}
-      </div>
-      <div class="col-12 col-md-6 form-field-wrapper">
-        <label for="{{ form.related_opportunity.id_for_label }}" class="form-label">{{ form.related_opportunity.label }}</label>
-        {{ form.related_opportunity }}
-        {% if form.related_opportunity.errors %}<div class="invalid-feedback d-block">{{ form.related_opportunity.errors }}</div>{% endif %}
-      </div>
-    </div>
+  <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+    <label for="{{ form.filing_date.id_for_label }}" class="form-label">{{ form.filing_date.label }}{% if form.filing_date.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+    {{ form.filing_date }}
+    {% if form.filing_date.errors %}<div class="invalid-feedback d-block">{{ form.filing_date.errors }}</div>{% endif %}
   </div>
-</div>
-{% endblock form_basic_info_card %}
-
-{% block form_other_fields_card %}
-<div class="form-card form-card-other-fields">
-  <div class="form-card-header">
-    <h3 class="form-card-title">
-      <i class="fas fa-list-alt"></i>
-      备案详情
-    </h3>
+  <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+    <label for="{{ form.filing_type.id_for_label }}" class="form-label">{{ form.filing_type.label }}{% if form.filing_type.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+    {{ form.filing_type }}
+    {% if form.filing_type.errors %}<div class="invalid-feedback d-block">{{ form.filing_type.errors }}</div>{% endif %}
   </div>
-  <div class="form-card-body">
-    {% block form_fields %}
-    <div class="row g-3">
-      <div class="col-12 form-field-wrapper">
-        <label for="{{ form.filing_content.id_for_label }}" class="form-label">
-          {{ form.filing_content.label }}
-          {% if form.filing_content.field.required %}<span class="text-danger">*</span>{% endif %}
-        </label>
-        {{ form.filing_content }}
-        {% if form.filing_content.errors %}
-        <div class="invalid-feedback d-block">{{ form.filing_content.errors }}</div>
-        {% endif %}
-      </div>
-      <div class="col-12 form-field-wrapper">
-        <label for="{{ form.filing_purpose.id_for_label }}" class="form-label">{{ form.filing_purpose.label }}</label>
-        {{ form.filing_purpose }}
-        {% if form.filing_purpose.errors %}
-        <div class="invalid-feedback d-block">{{ form.filing_purpose.errors }}</div>
-        {% endif %}
-      </div>
-      <div class="col-12 form-field-wrapper">
-        <label for="{{ form.filing_notes.id_for_label }}" class="form-label">{{ form.filing_notes.label }}</label>
-        {{ form.filing_notes }}
-        {% if form.filing_notes.errors %}
-        <div class="invalid-feedback d-block">{{ form.filing_notes.errors }}</div>
-        {% endif %}
-      </div>
-    </div>
-    {% endblock form_fields %}
+  <div class="col-12 col-md-6 form-field-wrapper">
+    <label for="{{ form.filing_number.id_for_label }}" class="form-label">{{ form.filing_number.label }}</label>
+    {{ form.filing_number }}
+    {% if form.filing_number.errors %}<div class="invalid-feedback d-block">{{ form.filing_number.errors }}</div>{% endif %}
+    {% if form.filing_number.help_text %}<div class="form-text">{{ form.filing_number.help_text }}</div>{% endif %}
   </div>
-</div>
-{% endblock form_other_fields_card %}
+  <div class="col-12 col-md-6 form-field-wrapper">
+    <label for="{{ form.related_opportunity.id_for_label }}" class="form-label">{{ form.related_opportunity.label }}</label>
+    {{ form.related_opportunity }}
+    {% if form.related_opportunity.errors %}<div class="invalid-feedback d-block">{{ form.related_opportunity.errors }}</div>{% endif %}
+  </div>
+  <div class="col-12 form-field-wrapper">
+    <label for="{{ form.filing_content.id_for_label }}" class="form-label">{{ form.filing_content.label }}{% if form.filing_content.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+    {{ form.filing_content }}
+    {% if form.filing_content.errors %}<div class="invalid-feedback d-block">{{ form.filing_content.errors }}</div>{% endif %}
+  </div>
+  <div class="col-12 form-field-wrapper">
+    <label for="{{ form.filing_purpose.id_for_label }}" class="form-label">{{ form.filing_purpose.label }}</label>
+    {{ form.filing_purpose }}
+    {% if form.filing_purpose.errors %}<div class="invalid-feedback d-block">{{ form.filing_purpose.errors }}</div>{% endif %}
+  </div>
+  <div class="col-12 form-field-wrapper">
+    <label for="{{ form.filing_notes.id_for_label }}" class="form-label">{{ form.filing_notes.label }}</label>
+    {{ form.filing_notes }}
+    {% if form.filing_notes.errors %}<div class="invalid-feedback d-block">{{ form.filing_notes.errors }}</div>{% endif %}
+  </div>
+{% endblock form_fields %}
 
 {% block form_actions %}
-  <a href="{% url cancel_url_name|default:'customer_pages:customer_lead_list' %}" class="btn btn-secondary">取消</a>
+  {% if list_url %}<a href="{{ list_url }}" class="btn btn-secondary">取消</a>{% elif list_url_name %}<a href="{% url list_url_name %}" class="btn btn-secondary">取消</a>{% else %}<a href="{% url cancel_url_name|default:'customer_pages:customer_list' %}" class="btn btn-secondary">取消</a>{% endif %}
   <button type="button" class="btn btn-primary" id="headerSubmitButton">创建</button>
 {% endblock form_actions %}

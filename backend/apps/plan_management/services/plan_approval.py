@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
-from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalInstance
+from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalInstance, WorkflowBinding
 from backend.apps.workflow_engine.services import ApprovalEngine
 from backend.apps.plan_management.models import Plan
 
@@ -16,15 +16,59 @@ logger = logging.getLogger(__name__)
 
 
 class PlanApprovalService:
-    """计划管理审批服务"""
+    """
+    计划管理审批服务
     
-    # 审批流程代码常量
+    支持流程模板绑定配置（WorkflowBinding）：
+    - 无绑定配置时，使用默认模板（plan_start_approval / plan_cancel_approval）
+    - 有绑定配置时，优先使用配置的模板
+    - 历史审批实例不受影响，仍使用原模板
+    - 状态迁移、signal 行为完全不受模板切换影响
+    """
+    
+    # 审批流程代码常量（兜底模板代码）
     PLAN_START_WORKFLOW_CODE = 'plan_start_approval'
     PLAN_CANCEL_WORKFLOW_CODE = 'plan_cancel_approval'
     
     @staticmethod
+    def get_workflow_from_binding(plan: Plan, action: str) -> Optional[WorkflowTemplate]:
+        """
+        从绑定配置获取审批流程模板（配置优先）
+        
+        Args:
+            plan: 计划对象
+            action: 操作类型（'start' 或 'cancel'）
+            
+        Returns:
+            WorkflowTemplate: 审批流程模板，如果未配置则返回 None
+        """
+        try:
+            content_type = ContentType.objects.get_for_model(plan)
+            binding = WorkflowBinding.objects.filter(
+                content_type=content_type,
+                action=action,
+                is_active=True
+            ).order_by('-priority').first()
+            
+            if binding and binding.workflow_template:
+                logger.info(f'从绑定配置获取流程模板: {binding.workflow_template.code} (绑定ID: {binding.id}, action: {action})')
+                return binding.workflow_template
+        except Exception as e:
+            logger.warning(f'获取绑定配置失败: {str(e)}')
+        
+        return None
+    
+    @staticmethod
     def get_workflow_by_code(code: str) -> Optional[WorkflowTemplate]:
-        """根据代码获取审批流程模板"""
+        """
+        根据代码获取审批流程模板（兜底逻辑）
+        
+        Args:
+            code: 流程代码
+            
+        Returns:
+            WorkflowTemplate: 审批流程模板，如果未配置则返回 None
+        """
         try:
             return WorkflowTemplate.objects.get(code=code, status='active')
         except WorkflowTemplate.DoesNotExist:
@@ -62,10 +106,13 @@ class PlanApprovalService:
             logger.warning(f'计划 {plan.plan_number} 已有启动审批实例: {existing_instance.instance_number}')
             return existing_instance
         
-        # 获取审批流程模板
-        workflow = PlanApprovalService.get_workflow_by_code(
-            PlanApprovalService.PLAN_START_WORKFLOW_CODE
-        )
+        # 获取审批流程模板（配置优先、兜底原逻辑）
+        workflow = PlanApprovalService.get_workflow_from_binding(plan, action='start')
+        if not workflow:
+            # 兜底：使用原逻辑
+            workflow = PlanApprovalService.get_workflow_by_code(
+                PlanApprovalService.PLAN_START_WORKFLOW_CODE
+            )
         
         if not workflow:
             logger.warning(f'计划启动审批流程未配置，跳过审批')
@@ -118,10 +165,13 @@ class PlanApprovalService:
             logger.warning(f'计划 {plan.plan_number} 已有取消审批实例: {existing_instance.instance_number}')
             return existing_instance
         
-        # 获取审批流程模板
-        workflow = PlanApprovalService.get_workflow_by_code(
-            PlanApprovalService.PLAN_CANCEL_WORKFLOW_CODE
-        )
+        # 获取审批流程模板（配置优先、兜底原逻辑）
+        workflow = PlanApprovalService.get_workflow_from_binding(plan, action='cancel')
+        if not workflow:
+            # 兜底：使用原逻辑
+            workflow = PlanApprovalService.get_workflow_by_code(
+                PlanApprovalService.PLAN_CANCEL_WORKFLOW_CODE
+            )
         
         if not workflow:
             logger.warning(f'计划取消审批流程未配置，跳过审批')
@@ -290,20 +340,18 @@ class PlanApprovalService:
             status__in=['pending', 'in_progress']
         ).first()
         
-        # 获取 PlanDecision（向后兼容）
-        pending_decisions = PlanDecision.objects.filter(
-            plan=plan,
-            decided_at__isnull=True
-        )
+        # G1-4: PlanDecision 已退场，不再作为待办或审批来源
+        # 仅保留历史数据的只读查询（用于显示历史记录）
+        # 待办和审批来源统一使用 ApprovalInstance
         
-        has_pending_start = start_approval_instance is not None or pending_decisions.filter(request_type='start').exists()
-        has_pending_cancel = cancel_approval_instance is not None or pending_decisions.filter(request_type='cancel').exists()
+        has_pending_start = start_approval_instance is not None
+        has_pending_cancel = cancel_approval_instance is not None
         
         return {
             'has_pending_start': has_pending_start,
             'has_pending_cancel': has_pending_cancel,
             'start_approval_instance': start_approval_instance,
             'cancel_approval_instance': cancel_approval_instance,
-            'pending_decisions': pending_decisions,
+            # 不再返回 pending_decisions，因为 PlanDecision 已退场
         }
 

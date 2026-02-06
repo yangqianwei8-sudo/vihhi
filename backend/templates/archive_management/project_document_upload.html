@@ -5,6 +5,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/archive/project-document-upload.css' %}">
 <style>
     .form-group {
         margin-bottom: 20px;
@@ -117,7 +118,7 @@
                         </label>
                         {{ form.document_name }}
                         {% if form.document_name.errors %}
-                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.document_name.errors }}</div>
+                        <div class="text-danger pdu-field-error">{{ form.document_name.errors }}</div>
                         {% endif %}
                         <small class="form-text text-muted">请输入文档名称</small>
                     </div>
@@ -129,7 +130,7 @@
                         </label>
                         {{ form.document_type }}
                         {% if form.document_type.errors %}
-                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.document_type.errors }}</div>
+                        <div class="text-danger pdu-field-error">{{ form.document_type.errors }}</div>
                         {% endif %}
                         <small class="form-text text-muted">选择文档类型</small>
                     </div>
@@ -143,7 +144,7 @@
                         </label>
                         {{ form.project }}
                         {% if form.project.errors %}
-                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.project.errors }}</div>
+                        <div class="text-danger pdu-field-error">{{ form.project.errors }}</div>
                         {% endif %}
                         <small class="form-text text-muted">选择所属项目</small>
                     </div>
@@ -155,7 +156,7 @@
                         </label>
                         {{ form.category }}
                         {% if form.category.errors %}
-                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.category.errors }}</div>
+                        <div class="text-danger pdu-field-error">{{ form.category.errors }}</div>
                         {% endif %}
                         <small class="form-text text-muted">选择文档分类</small>
                     </div>
@@ -175,7 +176,7 @@
                         </label>
                         {{ form.file }}
                         {% if form.file.errors %}
-                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.file.errors }}</div>
+                        <div class="text-danger pdu-field-error">{{ form.file.errors }}</div>
                         {% endif %}
                         <small class="form-text text-muted">
                             支持格式：PDF、Word (.doc, .docx)、Excel (.xls, .xlsx)、PPT (.ppt, .pptx)、TXT、图片 (JPG, PNG)、CAD (.dwg)、压缩包 (ZIP, RAR)
@@ -197,7 +198,7 @@
                         </label>
                         {{ form.description }}
                         {% if form.description.errors %}
-                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.description.errors }}</div>
+                        <div class="text-danger pdu-field-error">{{ form.description.errors }}</div>
                         {% endif %}
                         <small class="form-text text-muted">可选的文档描述信息</small>
                     </div>
@@ -211,7 +212,7 @@
                         </label>
                         {{ form.tags }}
                         {% if form.tags.errors %}
-                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.tags.errors }}</div>
+                        <div class="text-danger pdu-field-error">{{ form.tags.errors }}</div>
                         {% endif %}
                         <small class="form-text text-muted">多个标签用逗号分隔</small>
                     </div>
@@ -223,7 +224,7 @@
                         </label>
                         {{ form.security_level }}
                         {% if form.security_level.errors %}
-                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.security_level.errors }}</div>
+                        <div class="text-danger pdu-field-error">{{ form.security_level.errors }}</div>
                         {% endif %}
                         <small class="form-text text-muted">选择文档密级</small>
                     </div>
@@ -235,7 +236,7 @@
                         </label>
                         {{ form.version }}
                         {% if form.version.errors %}
-                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.version.errors }}</div>
+                        <div class="text-danger pdu-field-error">{{ form.version.errors }}</div>
                         {% endif %}
                         <small class="form-text text-muted">如：v1.0</small>
                     </div>
@@ -283,7 +284,9 @@
                         </td>
                         <td>
                             <button type="button" class="btn btn-sm btn-outline-primary"
-                                    onclick="selectProject({{ project.id }}, '{{ project.project_name }}')">
+                                    data-action="select-project"
+                                    data-project-id="{{ project.id }}"
+                                    data-project-name="{{ project.project_name }}">
                                 <i class="bi bi-check-circle"></i> 选择
                             </button>
                         </td>
@@ -320,76 +323,8 @@
     </div>
 </div>
 
-<script>
-function selectProject(projectId, projectName) {
-    // 设置项目选择框的值
-    const projectSelect = document.getElementById('{{ form.project.id_for_label }}');
-    if (projectSelect) {
-        projectSelect.value = projectId;
-        projectSelect.dispatchEvent(new Event('change'));
-    }
-
-    // 显示提示信息
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-success alert-dismissible fade show';
-    alertDiv.innerHTML = `
-        <i class="bi bi-check-circle"></i> 已选择项目：${projectName}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.querySelector('.form-card').insertBefore(alertDiv, document.querySelector('.form-card').firstChild);
-
-    // 滚动到表单
-    document.querySelector('form').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// 文件选择预览
-document.getElementById('{{ form.file.id_for_label }}').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const fileSize = (file.size / 1024 / 1024).toFixed(2);
-        if (file.size > 100 * 1024 * 1024) {
-            alert(`文件大小 ${fileSize}MB 超过100MB限制，请选择较小的文件`);
-            e.target.value = '';
-            return;
-        }
-
-        // 自动填充文档名称（如果没有填写）
-        const docNameInput = document.getElementById('{{ form.document_name.id_for_label }}');
-        if (!docNameInput.value) {
-            const fileName = file.name.replace(/\.[^/.]+$/, '');
-            docNameInput.value = fileName;
-        }
-    }
-});
-
-// 表单提交验证
-document.getElementById('uploadForm').addEventListener('submit', function(e) {
-    const docName = document.getElementById('{{ form.document_name.id_for_label }}').value;
-    const fileInput = document.getElementById('{{ form.file.id_for_label }}');
-    const projectSelect = document.getElementById('{{ form.project.id_for_label }}');
-
-    if (!docName.trim()) {
-        e.preventDefault();
-        alert('请填写文档名称');
-        return false;
-    }
-
-    if (!fileInput.files || fileInput.files.length === 0) {
-        e.preventDefault();
-        alert('请选择要上传的文件');
-        return false;
-    }
-
-    if (!projectSelect.value) {
-        e.preventDefault();
-        alert('请选择所属项目');
-        return false;
-    }
-
-    if (!confirm('确定要上传文档吗？')) {
-        e.preventDefault();
-        return false;
-    }
-});
+<script type="application/json" id="projectDocumentUploadConfig">
+{"projectSelectId": "{{ form.project.id_for_label }}", "documentNameId": "{{ form.document_name.id_for_label }}", "fileInputId": "{{ form.file.id_for_label }}", "formCardSelector": ".form-card", "uploadFormId": "uploadForm"}
 </script>
+<script src="{% static 'js/archive/project-document-upload.js' %}"></script>
 {% endblock %}

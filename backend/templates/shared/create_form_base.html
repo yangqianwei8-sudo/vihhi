@@ -41,6 +41,12 @@
 2. 主要操作按钮（提交、创建、保存等）：使用 btn btn-primary 类
 3. 次要操作按钮（取消、返回等）：使用 btn btn-secondary 类
 4. 按钮样式会自动继承模板样式，使用CSS变量
+
+【基本信息卡片治理 - 固定三字段】
+============================================
+- 基本信息卡片由基模固定渲染，包含：所属部门（responsible_department）、负责人（responsible_person）、表单编号（form_number 或 goal_number 或 plan_number，按表单存在其一）。
+- 子模板不得重复渲染上述三字段；其他字段自动进入「详细信息」卡片（默认 form_fields 会排除上述三字段后渲染 form.visible_fields）。
+- 表单层约定：这三项应为只读、系统自动填充。在 Form.__init__ 中设置 disabled=True 或 readonly，并在 clean/save 中补全提交时未携带的值。
 #}
 
 {% block module_styles %}
@@ -104,9 +110,8 @@
     </div>
     {% endif %}
 
-    {# ==================== 卡片1：基本信息（子模板可覆盖 form_basic_info_card） ==================== #}
+    {# ==================== 卡片1：基本信息（永远显示；固定三字段：所属部门、负责人、表单编号；缺字段时占位，子模板不得重复渲染） ==================== #}
     {% block form_basic_info_card %}
-    {% if form.responsible_department %}
     <div class="form-card form-card-basic-info">
       <div class="form-card-header">
         <h3 class="form-card-title">
@@ -115,96 +120,81 @@
         </h3>
       </div>
       <div class="form-card-body">
-        {# 仅三项：所属部门、负责人、表单编号；其余字段请放在「详细信息」卡片的 form_fields 中 #}
         <div class="row g-3">
-          {# 所属部门字段（固定，必存在） #}
+          {% if "responsible_department" in form.fields %}
           <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
-            <label for="{{ form.responsible_department.id_for_label }}" class="form-label">
-              {% if form.responsible_department.label %}
-                {% if "默认" in form.responsible_department.label or "不可修改" in form.responsible_department.label %}
-                  {{ form.responsible_department.label }}
-                {% else %}
-                  {{ form.responsible_department.label }}（默认，不可修改）
-                {% endif %}
-              {% else %}
-                所属部门（默认，不可修改）
-              {% endif %}
-              {% if form.responsible_department.field.required %}<span class="text-danger">*</span>{% endif %}
-            </label>
+            <label for="{{ form.responsible_department.id_for_label }}" class="form-label">所属部门（默认，不可修改）</label>
             {{ form.responsible_department }}
             {% if form.responsible_department.errors %}
             <div class="invalid-feedback d-block">{{ form.responsible_department.errors }}</div>
             {% endif %}
-            {% if form.responsible_department.help_text %}
-            <div class="form-text">{{ form.responsible_department.help_text }}</div>
-            {% endif %}
           </div>
-
-          {# 负责人字段（固定，必存在） #}
+          {% else %}
           <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
-            <label for="{{ form.responsible_person.id_for_label }}" class="form-label">
-              {% if form.responsible_person.label %}
-                {% if "默认" in form.responsible_person.label or "不可修改" in form.responsible_person.label %}
-                  {{ form.responsible_person.label }}
-                {% else %}
-                  {{ form.responsible_person.label }}（默认，不可修改）
-                {% endif %}
-              {% else %}
-                负责人（默认，不可修改）
-              {% endif %}
-              {% if form.responsible_person.field.required %}<span class="text-danger">*</span>{% endif %}
-            </label>
+            <label class="form-label text-muted">所属部门</label>
+            <p class="form-control-plaintext text-muted small mb-0">该表单未配置此字段</p>
+          </div>
+          {% endif %}
+          {% if "responsible_person" in form.fields %}
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label for="{{ form.responsible_person.id_for_label }}" class="form-label">负责人（默认，不可修改）</label>
             {{ form.responsible_person }}
             {% if form.responsible_person.errors %}
             <div class="invalid-feedback d-block">{{ form.responsible_person.errors }}</div>
             {% endif %}
-            {% if form.responsible_person.help_text %}
-            <div class="form-text">{{ form.responsible_person.help_text }}</div>
-            {% endif %}
           </div>
-
-          {# 表单编号字段（固定，必存在）：自动检测 goal_number、plan_number、form_number #}
-          {% if form.goal_number %}
+          {% else %}
           <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
-            <label for="{{ form.goal_number.id_for_label }}" class="form-label">
-              {{ form.goal_number.label }}
-              {% if form.goal_number.field.required %}<span class="text-danger">*</span>{% endif %}
-            </label>
+            <label class="form-label text-muted">负责人</label>
+            <p class="form-control-plaintext text-muted small mb-0">该表单未配置此字段</p>
+          </div>
+          {% endif %}
+          {% if "goal_number" in form.fields %}
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label for="{{ form.goal_number.id_for_label }}" class="form-label">表单编号（默认，不可修改）</label>
             {{ form.goal_number }}
             {% if form.goal_number.errors %}
             <div class="invalid-feedback d-block">{{ form.goal_number.errors }}</div>
             {% endif %}
           </div>
-          {% elif form.plan_number %}
+          {% elif "plan_number" in form.fields %}
           <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
-            <label for="{{ form.plan_number.id_for_label }}" class="form-label">
-              {{ form.plan_number.label }}
-              {% if form.plan_number.field.required %}<span class="text-danger">*</span>{% endif %}
-            </label>
+            <label for="{{ form.plan_number.id_for_label }}" class="form-label">表单编号（默认，不可修改）</label>
             {{ form.plan_number }}
             {% if form.plan_number.errors %}
             <div class="invalid-feedback d-block">{{ form.plan_number.errors }}</div>
             {% endif %}
           </div>
-          {% elif form.form_number %}
+          {% elif "form_number" in form.fields %}
           <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
-            <label for="{{ form.form_number.id_for_label }}" class="form-label">
-              {{ form.form_number.label }}
-              {% if form.form_number.field.required %}<span class="text-danger">*</span>{% endif %}
-            </label>
+            <label for="{{ form.form_number.id_for_label }}" class="form-label">表单编号（默认，不可修改）</label>
             {{ form.form_number }}
             {% if form.form_number.errors %}
             <div class="invalid-feedback d-block">{{ form.form_number.errors }}</div>
             {% endif %}
           </div>
+          {% elif "goal_number_display" in form.fields %}
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label for="{{ form.goal_number_display.id_for_label }}" class="form-label">表单编号（默认，不可修改）</label>
+            {{ form.goal_number_display }}
+          </div>
+          {% elif "plan_number_display" in form.fields %}
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label for="{{ form.plan_number_display.id_for_label }}" class="form-label">表单编号（默认，不可修改）</label>
+            {{ form.plan_number_display }}
+          </div>
+          {% else %}
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label class="form-label text-muted">表单编号</label>
+            <p class="form-control-plaintext text-muted small mb-0">该表单未配置此字段</p>
+          </div>
           {% endif %}
         </div>
       </div>
     </div>
-    {% endif %}
     {% endblock form_basic_info_card %}
 
-    {# ==================== 卡片2：其他字段 ==================== #}
+    {# ==================== 卡片2：详细信息（自动排除基本信息三字段；子模板可覆盖 form_fields 自定义布局） ==================== #}
     {% block form_other_fields_card %}
     <div class="form-card form-card-other-fields">
       <div class="form-card-header">
@@ -215,8 +205,25 @@
       </div>
       <div class="form-card-body">
         <div class="row g-3">
-          {% block form_fields %}{% endblock %}
-          {# 原「基本信息」中的额外字段统一移入此处展示 #}
+          {% block form_fields %}
+          {# 默认：除基本信息三字段（含 goal_number_display/plan_number_display）外，全部在此渲染 #}
+          {% for field in form.visible_fields %}
+            {% if field.name != "responsible_department" and field.name != "responsible_person" and field.name != "form_number" and field.name != "goal_number" and field.name != "plan_number" and field.name != "goal_number_display" and field.name != "plan_number_display" %}
+            <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+              <label for="{{ field.id_for_label }}" class="form-label">
+                {{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+              </label>
+              {{ field }}
+              {% if field.errors %}
+              <div class="invalid-feedback d-block">{{ field.errors }}</div>
+              {% endif %}
+              {% if field.help_text %}
+              <div class="form-text">{{ field.help_text }}</div>
+              {% endif %}
+            </div>
+            {% endif %}
+          {% endfor %}
+          {% endblock form_fields %}
           {% block form_first_row_extra_fields %}{% endblock %}
           {% block form_second_row_extra_fields %}{% endblock %}
         </div>
@@ -249,6 +256,8 @@
 {% endblock pm_content %}
 
 {% block module_extra_js %}
-<script type="application/json" id="createFormConfig">{"formId":"createForm","hiddenSubmitId":"hiddenSubmitButton","isDraftFieldId":"isDraftField","submitBtnId":"headerSubmitButton","draftBtnId":"draftButton","scrollRestore":true,"validateRequired":true,"errorAlertSelector":".alert-danger, .alert-warning, .alert-info"}</script>
+<script type="application/json" id="createFormConfig">
+{"formId":"createForm","hiddenSubmitId":"hiddenSubmitButton","isDraftFieldId":"isDraftField","submitBtnId":"headerSubmitButton","draftBtnId":"draftButton","scrollRestore":true,"validateRequired":true,"errorAlertSelector":".alert-danger, .alert-warning, .alert-info","showAll":"{{ show_all|default:'' }}","stageCode":"{{ stage_code|default:'' }}"}
+</script>
 {{ block.super }}
 {% endblock module_extra_js %}

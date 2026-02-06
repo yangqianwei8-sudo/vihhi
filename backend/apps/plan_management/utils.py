@@ -44,19 +44,14 @@ class UserProfileNotFoundError(Exception):
 
 def apply_company_scope(qs, user, company_field="company"):
     """
-    应用公司数据隔离 - 改进版（P0-1b）
+    应用公司数据隔离 - P0-2 版本（使用 user.company_id）
     
-    ⚠️ P0-1b: 公司信息来源优先级策略（已实现）
-    
-    系统中公司信息的真实来源（按优先级排序，仅列出已实现的策略）：
-    1. user.profile.company_id (UserProfile.company, ForeignKey 到 org.Company) - 主要来源
-    2. user.profile.department.company_id (通过 org.Department.company 推导) - 备用推导方式
+    ⚠️ P0-2: 公司信息来源已改为 user.company_id（User.company 外键）
     
     策略说明：
-    - 优先使用 user.profile.company_id（主要来源，记录 info 日志）
-    - 如果 profile.company_id 为 None，尝试从 profile.department.company_id 推导（备用策略，记录 warning 日志）
-    - 如果无法确定 company_id：返回 qs.none() + error 日志（禁止 silent fallback，确保问题可定位）
-    - 如果 user.profile 不存在：返回 qs.none() + error 日志（不抛异常，避免页面不可用）
+    - 使用 user.company_id（直接字段，链路最短）
+    - 如果 user.company_id 为 None：记录警告但不过滤（避免列表永远为空）
+    - 超管不过滤（可查看所有公司数据）
     
     Args:
         qs: QuerySet
@@ -64,7 +59,7 @@ def apply_company_scope(qs, user, company_field="company"):
         company_field: 公司字段名，默认为 "company"
     
     Returns:
-        过滤后的 QuerySet（如果无法确定 company_id，返回 qs.none()）
+        过滤后的 QuerySet（如果无法确定 company_id，返回未过滤查询集）
     """
     import logging
     logger = logging.getLogger(__name__)
@@ -72,78 +67,43 @@ def apply_company_scope(qs, user, company_field="company"):
     if user.is_superuser:
         return qs
     
-    company_id = None
+    # P0-2: 直接使用 user.company_id
+    company_id = user.company_id
     
-    # ✅ 兜底修复：尝试获取 profile，如果不存在则记录警告但不过滤（避免列表永远为空）
-    try:
-        profile = user.profile
-    except AttributeError:
-        # user.profile 属性不存在（可能是 Profile 模型未定义或未关联）
-        logger.warning(
-            "apply_company_scope: 用户缺少 profile 属性，跳过公司隔离过滤 - "
-            "user_id=%s, username=%s, 返回未过滤查询集",
-            user.id, user.username
-        )
-        return qs
-    
-    if profile is None:
-        # profile 关系存在但为 None（OneToOne 关系未设置）
-        logger.warning(
-            "apply_company_scope: 用户 profile 关系为 None，跳过公司隔离过滤 - "
-            "user_id=%s, username=%s, 返回未过滤查询集",
-            user.id, user.username
-        )
-        return qs
-    
-    # ⚠️ P0-1b: 策略1 - 优先使用 profile.company_id（主要来源）
-    try:
-        company_id = profile.company_id
-        if company_id is not None:
-            logger.info(
-                "apply_company_scope: 使用 profile.company_id (主要来源) - "
-                "user_id=%s, username=%s, company_id=%s",
-                user.id, user.username, company_id
-            )
-    except AttributeError:
-        # profile 对象存在但缺少 company 属性
-        logger.warning(
-            "apply_company_scope: Profile 对象缺少 company 属性，跳过公司隔离过滤 - "
-            "user_id=%s, username=%s, 返回未过滤查询集",
-            user.id, user.username
-        )
-        return qs
-    
-    # ⚠️ P0-1b: 策略2 - 如果 profile.company_id 为 None，尝试从 department 推导（备用策略）
-    if company_id is None:
-        try:
-            if hasattr(profile, 'department') and profile.department:
-                dept = profile.department
-                if hasattr(dept, 'company_id') and dept.company_id:
-                    company_id = dept.company_id
-                    logger.warning(
-                        "apply_company_scope: 使用 department.company_id (备用推导) - "
-                        "user_id=%s, username=%s, company_id=%s, department_id=%s",
-                        user.id, user.username, company_id, dept.id
-                    )
-        except Exception as e:
-            logger.debug(
-                "apply_company_scope: 尝试通过 department 推导公司失败 - "
-                "user_id=%s, username=%s, error=%s",
-                user.id, user.username, str(e)
-            )
-    
-    # ✅ 兜底修复：如果无法确定 company_id，记录警告但不过滤（避免列表永远为空）
     if company_id is None:
         logger.warning(
-            "apply_company_scope: 无法确定用户公司信息，跳过公司隔离过滤 - "
-            "user_id=%s, username=%s, profile.company_id=None, "
-            "profile.department.company_id=None, 返回未过滤查询集",
+            "apply_company_scope: 用户 company_id 为 None，跳过公司隔离过滤 - "
+            "user_id=%s, username=%s, 返回未过滤查询集",
             user.id, user.username
         )
         return qs
     
-    # ✅ 只在 company_id 有值时才过滤
-    return qs.filter(**{f"{company_field}_id": company_id}) if company_id else qs
+    logger.info(
+        "apply_company_scope: 使用 user.company_id - "
+        "user_id=%s, username=%s, company_id=%s",
+        user.id, user.username, company_id
+    )
+    
+    # 应用公司过滤
+    return qs.filter(**{f"{company_field}_id": company_id})
+
+
+def apply_goal_company_scope(qs, user):
+    """
+    StrategicGoal 公司隔离（模型无 company 字段，按 responsible_department.company_id）。
+    普通用户仅能见：responsible_department__company_id=user.company_id；
+    responsible_department 为空的记录不可见。超管不过滤。
+    """
+    if user.is_superuser:
+        return qs
+    company_id = getattr(user, 'company_id', None)
+    if company_id is None:
+        import logging
+        logging.getLogger(__name__).warning(
+            "apply_goal_company_scope: user.company_id 为空，跳过过滤 user_id=%s", user.id
+        )
+        return qs
+    return qs.filter(responsible_department__company_id=company_id)
 
 
 def apply_mine_participating_range(

@@ -703,13 +703,15 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             if todo.related_object_type == 'goal' and todo.related_object_id:
                 try:
                     url = reverse('plan_pages:strategic_goal_track', args=[todo.related_object_id])
-                except:
-                    pass
+                except Exception as e:
+                    # 如果 reverse 失败，使用备用 URL
+                    url = f'/plan/strategic-goals/{todo.related_object_id}/track/'
             elif todo.related_object_type == 'plan' and todo.related_object_id:
                 try:
                     url = reverse('plan_pages:plan_execution_track', args=[todo.related_object_id])
-                except:
-                    pass
+                except Exception as e:
+                    # 如果 reverse 失败，使用备用 URL
+                    url = f'/plan/plans/{todo.related_object_id}/track/'
             else:
                 # 如果没有关联对象，跳转到对应的列表页面
                 if todo.task_type == 'goal_progress_update':
@@ -726,14 +728,16 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             # 其他目标相关待办
             try:
                 url = reverse('plan_pages:strategic_goal_detail', args=[todo.related_object_id])
-            except:
-                pass
+            except Exception as e:
+                # 如果 reverse 失败，使用备用 URL
+                url = f'/plan/strategic-goals/{todo.related_object_id}/'
         elif todo.related_object_type == 'plan' and todo.related_object_id:
             # 其他计划相关待办
             try:
                 url = reverse('plan_pages:plan_detail', args=[todo.related_object_id])
-            except:
-                pass
+            except Exception as e:
+                # 如果 reverse 失败，使用备用 URL
+                url = f'/plan/plans/{todo.related_object_id}/'
         
         priority = 'high' if todo.is_overdue else ('high' if (todo.deadline - now).total_seconds() < 86400 else 'medium')
         
@@ -1542,23 +1546,39 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
             if todo.related_object_type == 'goal' and todo.related_object_id:
                 try:
                     url = reverse('plan_pages:strategic_goal_track', args=[todo.related_object_id])
-                except:
-                    pass
+                except Exception as e:
+                    # 如果 reverse 失败，使用备用 URL
+                    url = f'/plan/strategic-goals/{todo.related_object_id}/track/'
             elif todo.related_object_type == 'plan' and todo.related_object_id:
                 try:
                     url = reverse('plan_pages:plan_execution_track', args=[todo.related_object_id])
-                except:
-                    pass
+                except Exception as e:
+                    # 如果 reverse 失败，使用备用 URL
+                    url = f'/plan/plans/{todo.related_object_id}/track/'
+            else:
+                # 如果没有关联对象，跳转到对应的列表页面
+                if todo.task_type == 'goal_progress_update':
+                    try:
+                        url = reverse('plan_pages:strategic_goal_list')
+                    except:
+                        url = '/plan/strategic-goals/'
+                elif todo.task_type == 'plan_progress_update':
+                    try:
+                        url = reverse('plan_pages:plan_list')
+                    except:
+                        url = '/plan/plans/'
         elif todo.related_object_type == 'goal' and todo.related_object_id:
             try:
                 url = reverse('plan_pages:strategic_goal_detail', args=[todo.related_object_id])
-            except:
-                pass
+            except Exception as e:
+                # 如果 reverse 失败，使用备用 URL
+                url = f'/plan/strategic-goals/{todo.related_object_id}/'
         elif todo.related_object_type == 'plan' and todo.related_object_id:
             try:
                 url = reverse('plan_pages:plan_detail', args=[todo.related_object_id])
-            except:
-                pass
+            except Exception as e:
+                # 如果 reverse 失败，使用备用 URL
+                url = f'/plan/plans/{todo.related_object_id}/'
         
         priority = 'high' if todo.is_overdue else ('high' if (todo.deadline - now).total_seconds() < 86400 else 'medium')
         

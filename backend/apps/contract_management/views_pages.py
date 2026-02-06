@@ -1067,7 +1067,6 @@ def contract_create(request):
     after_sales_node_types = AfterSalesNodeType.objects.filter(is_active=True).order_by('order', 'id')
     
     # 获取成果文件类型（用于服务内容的成果清单）
-    from backend.apps.production_management.models import ResultFileType
     result_file_types = ResultFileType.objects.filter(is_active=True).order_by('service_category', 'order', 'id')
     
     # 获取结算方式（用于价款信息）
@@ -1098,6 +1097,7 @@ def contract_create(request):
     business_managers = User.objects.filter(is_active=True).order_by('username')
     
     base_context.update({
+        'list_url_name': 'contract_pages:contract_management_list',
         'form': form,
         'clients': clients,
         'project_managers': project_managers,
@@ -1221,7 +1221,6 @@ def contract_edit(request, contract_id):
     after_sales_node_types = AfterSalesNodeType.objects.filter(is_active=True).order_by('order', 'id')
     
     # 获取成果文件类型（用于服务内容的成果清单）
-    from backend.apps.production_management.models import ResultFileType
     result_file_types = ResultFileType.objects.filter(is_active=True).order_by('service_category', 'order', 'id')
     
     # 获取结算方式（用于价款信息）
@@ -1252,6 +1251,7 @@ def contract_edit(request, contract_id):
     business_managers = User.objects.filter(is_active=True).order_by('username')
     
     base_context.update({
+        'list_url_name': 'contract_pages:contract_management_list',
         'form': form,
         'contract': contract,
         'clients': clients,
@@ -1348,47 +1348,20 @@ def contract_submit_approval(request, contract_id):
     
     if request.method == 'POST':
         try:
-            from django.contrib.contenttypes.models import ContentType
-            from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalInstance
-            from backend.apps.workflow_engine.services import ApprovalEngine
+            from backend.apps.contract_management.services import ContractApprovalService
             
-            # 检查是否已有正在进行的审批
-            content_type = ContentType.objects.get_for_model(BusinessContract)
-            existing_instance = ApprovalInstance.objects.filter(
-                content_type=content_type,
-                object_id=contract.id,
-                status__in=['pending', 'in_progress']
-            ).first()
-            
-            if existing_instance:
-                messages.warning(request, f'该合同已有正在进行的审批（审批编号：{existing_instance.instance_number}）')
-                return redirect('contract_pages:contract_detail', contract_id=contract_id)
-            
-            # 获取审批流程模板
-            try:
-                workflow = WorkflowTemplate.objects.get(
-                    code='contract_approval',
-                    status='active'
-                )
-            except WorkflowTemplate.DoesNotExist:
-                # 如果合同审批流程不存在，尝试使用客户管理审批流程
-                try:
-                    workflow = WorkflowTemplate.objects.get(
-                        code='customer_management_approval',
-                        status='active'
-                    )
-                except WorkflowTemplate.DoesNotExist:
-                    messages.error(request, '合同审批流程未配置，请联系管理员')
-                    return redirect('contract_pages:contract_detail', contract_id=contract_id)
-            
-            # 启动审批流程
+            # 使用审批服务提交审批
+            service = ContractApprovalService()
             comment = request.POST.get('comment', f'申请审批合同：{contract.contract_number} - {contract.contract_name}')
-            instance = ApprovalEngine.start_approval(
-                workflow=workflow,
-                content_object=contract,
+            instance = service.submit_approval(
+                obj=contract,
                 applicant=request.user,
                 comment=comment
             )
+            
+            if not instance:
+                messages.error(request, '合同审批流程未配置，请联系管理员')
+                return redirect('contract_pages:contract_detail', contract_id=contract_id)
             
             # 更新合同状态为待审核
             if contract.status == 'draft':
@@ -1398,22 +1371,22 @@ def contract_submit_approval(request, contract_id):
             messages.success(request, f'合同审批已提交（审批编号：{instance.instance_number}）')
             return redirect('contract_pages:contract_detail', contract_id=contract_id)
             
+        except ValueError as e:
+            messages.error(request, f'提交审批失败：{str(e)}')
+            return redirect('contract_pages:contract_detail', contract_id=contract_id)
         except Exception as e:
             logger.exception('提交合同审批失败: %s', str(e))
             messages.error(request, f'提交合同审批失败：{str(e)}')
             return redirect('contract_pages:contract_detail', contract_id=contract_id)
     
     # GET 请求，显示提交审批确认页面
-    from django.contrib.contenttypes.models import ContentType
+    from backend.apps.contract_management.services import ContractApprovalService
     from backend.apps.workflow_engine.models import ApprovalInstance
     
     # 检查是否已有正在进行的审批
-    content_type = ContentType.objects.get_for_model(BusinessContract)
-    existing_instance = ApprovalInstance.objects.filter(
-        content_type=content_type,
-        object_id=contract.id,
-        status__in=['pending', 'in_progress']
-    ).first()
+    service = ContractApprovalService()
+    instance = service.get_approval_instance(contract)
+    existing_instance = instance if instance and instance.status in ['pending', 'in_progress'] else None
     
     # 使用统一的上下文构建函数
     base_context = _context(
@@ -2115,6 +2088,7 @@ def contract_finalize_create(request):
         ]
     
     base_context.update({
+        'list_url_name': 'contract_pages:contract_management_list',
         'form': form,
         'authorization_letter': authorization_letter,
         'source_contract': source_contract,

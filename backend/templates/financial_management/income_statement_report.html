@@ -1,4 +1,5 @@
 {% extends "shared/two_column_layout_base.html" %}
+{% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
@@ -38,6 +39,11 @@
         text-align: right;
         font-family: 'Courier New', monospace;
     }
+    .isr-th-60 { width: 60%; }
+    .isr-th-40 { width: 40%; }
+    .isr-section-title { font-weight: 600; }
+    .isr-cell-indent { padding-left: 30px; }
+    .isr-row-net { background-color: #d4edda; }
 </style>
 {% endblock %}
 
@@ -67,26 +73,20 @@
                     <button type="submit" class="btn btn-primary me-2">
                         <i class="bi bi-search"></i> 查询
                     </button>
-                    <button type="button" class="btn btn-success" onclick="generateReport()">
+                    <button type="button" class="btn btn-success" data-action="income-statement-generate-report">
                         <i class="bi bi-file-earmark-bar-graph"></i> 生成报表
                     </button>
                 </div>
             </div>
         </form>
 
-        <form method="post" id="generateForm" style="display: none;">
+        <form method="post" id="generateForm" class="d-none">
             {% csrf_token %}
             <input type="hidden" name="period_year" id="hidden_period_year" value="{{ period_year }}">
             <input type="hidden" name="period_month" id="hidden_period_month" value="{{ period_month|default:'' }}">
         </form>
 
-        <script>
-        function generateReport() {
-            document.getElementById('hidden_period_year').value = document.querySelector('[name="period_year"]').value;
-            document.getElementById('hidden_period_month').value = document.querySelector('[name="period_month"]').value;
-            document.getElementById('generateForm').submit();
-        }
-        </script>
+        <script src="{% static 'js/financial/income-statement-report.js' %}"></script>
 
         <div class="text-center mb-4">
             <h3>利润表</h3>
@@ -97,22 +97,22 @@
             <table class="income-statement-table">
                 <thead>
                     <tr>
-                        <th style="width: 60%;">项目</th>
-                        <th style="width: 40%;" class="amount-cell">金额</th>
+                        <th class="isr-th-60">项目</th>
+                        <th class="isr-th-40 amount-cell">金额</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="2" style="font-weight: 600;">一、营业收入</td>
+                        <td colspan="2" class="isr-section-title">一、营业收入</td>
                     </tr>
                     {% for code, item in report_data.revenue.items %}
                     <tr>
-                        <td style="padding-left: 30px;">{{ item.name }}</td>
+                        <td class="isr-cell-indent">{{ item.name }}</td>
                         <td class="amount-cell">¥{{ item.amount|floatformat:2 }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="2" class="text-muted" style="padding-left: 30px;">暂无收入数据</td>
+                        <td colspan="2" class="text-muted isr-cell-indent">暂无收入数据</td>
                     </tr>
                     {% endfor %}
                     <tr class="total-row">
@@ -120,16 +120,16 @@
                         <td class="amount-cell"><strong>¥{{ report_data.total_revenue|floatformat:2 }}</strong></td>
                     </tr>
                     <tr>
-                        <td colspan="2" style="font-weight: 600;">二、营业成本</td>
+                        <td colspan="2" class="isr-section-title">二、营业成本</td>
                     </tr>
                     {% for code, item in report_data.costs.items %}
                     <tr>
-                        <td style="padding-left: 30px;">{{ item.name }}</td>
+                        <td class="isr-cell-indent">{{ item.name }}</td>
                         <td class="amount-cell">¥{{ item.amount|floatformat:2 }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="2" class="text-muted" style="padding-left: 30px;">暂无成本数据</td>
+                        <td colspan="2" class="text-muted isr-cell-indent">暂无成本数据</td>
                     </tr>
                     {% endfor %}
                     <tr class="total-row">
@@ -141,23 +141,23 @@
                         <td class="amount-cell"><strong>¥{{ report_data.gross_profit|floatformat:2 }}</strong></td>
                     </tr>
                     <tr>
-                        <td colspan="2" style="font-weight: 600;">四、期间费用</td>
+                        <td colspan="2" class="isr-section-title">四、期间费用</td>
                     </tr>
                     {% for code, item in report_data.expenses.items %}
                     <tr>
-                        <td style="padding-left: 30px;">{{ item.name }}</td>
+                        <td class="isr-cell-indent">{{ item.name }}</td>
                         <td class="amount-cell">¥{{ item.amount|floatformat:2 }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="2" class="text-muted" style="padding-left: 30px;">暂无费用数据</td>
+                        <td colspan="2" class="text-muted isr-cell-indent">暂无费用数据</td>
                     </tr>
                     {% endfor %}
                     <tr class="total-row">
                         <td><strong>期间费用合计</strong></td>
                         <td class="amount-cell"><strong>¥{{ report_data.total_expenses|floatformat:2 }}</strong></td>
                     </tr>
-                    <tr class="total-row" style="background-color: #d4edda;">
+                    <tr class="total-row isr-row-net">
                         <td><strong>五、净利润</strong></td>
                         <td class="amount-cell"><strong>¥{{ report_data.net_profit|floatformat:2 }}</strong></td>
                     </tr>

@@ -62,7 +62,8 @@ def notify_approvers(obj, event, actor, comment=None):
             # 公司隔离：只筛选同公司
             if hasattr(obj, 'company') and obj.company:
                 # 通过 profile 过滤同公司用户
-                approvers = approvers.filter(profile__company=obj.company)
+                # P0-2: 改为使用 user.company
+                approvers = approvers.filter(company=obj.company)
             
             # 排除操作人自己（如果操作人也是审批人，不需要通知自己）
             approvers = approvers.exclude(id=actor.id)
@@ -434,7 +435,8 @@ def notify_company_plan_published(plan):
             
             recipients = User.objects.filter(is_active=True)
             if hasattr(plan, 'company') and plan.company:
-                recipients = recipients.filter(profile__company=plan.company)
+                # P0-2: 改为使用 user.company
+                recipients = recipients.filter(company=plan.company)
             
             recipients = recipients.exclude(id=plan.created_by_id)
             

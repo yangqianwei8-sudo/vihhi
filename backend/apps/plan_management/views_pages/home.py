@@ -65,9 +65,11 @@ def plan_management_home(request):
     context['filter_end_date'] = filter_end_date
     context['active_tab'] = active_tab
     
-    # 获取所有部门和用户（用于筛选下拉框）
+    # 获取所有部门和用户（用于筛选下拉框）（P0-3: 按当前用户公司过滤）
     from backend.apps.plan_management.models import Plan, StrategicGoal
     all_departments = Department.objects.filter(is_active=True).order_by('order', 'name')
+    if getattr(request.user, 'company_id', None):
+        all_departments = all_departments.filter(company_id=request.user.company_id)
     context['all_departments'] = all_departments
     
     # 根据部门筛选用户
@@ -78,6 +80,15 @@ def plan_management_home(request):
         except ValueError:
             pass
     context['filter_users'] = filter_users.order_by('first_name', 'last_name', 'username')
+    
+    # P0-5: 计划列表仅限当前用户公司
+    plan_base = Plan.objects.all()
+    if getattr(request.user, 'company_id', None):
+        plan_base = plan_base.filter(company_id=request.user.company_id)
+    # StrategicGoal 按部门公司隔离（无 company 字段）；responsible_department 为空的记录普通用户不可见
+    goal_base = StrategicGoal.objects.all()
+    if getattr(request.user, 'company_id', None):
+        goal_base = goal_base.filter(responsible_department__company_id=request.user.company_id)
     
     # 辅助函数：应用筛选条件到查询集（不包含负责人筛选，因为负责人筛选已在查询时应用）
     def apply_filters_to_queryset(qs, model_type='plan'):
@@ -434,12 +445,24 @@ def plan_management_home(request):
             company_plan_stats = get_company_plan_stats(request.user)
             context['company_plan_stats'] = company_plan_stats
             
-            # 审批统计（仅管理视角）
-            # 待审批判定：decided_at is null（根据模型定义和注释）
-            pending_decisions = PlanDecision.objects.filter(decided_at__isnull=True)
-            pending_total = pending_decisions.count()
-            pending_start = pending_decisions.filter(request_type='start').count()
-            pending_cancel = pending_decisions.filter(request_type='cancel').count()
+            # G1-4: PlanDecision 已退场，不再作为待办或审批来源
+            # 审批统计统一使用 ApprovalInstance（审批引擎）
+            from django.contrib.contenttypes.models import ContentType
+            from backend.apps.workflow_engine.models import ApprovalInstance
+            from backend.apps.plan_management.services.plan_approval import PlanApprovalService
+            
+            plan_content_type = ContentType.objects.get_for_model(Plan)
+            pending_approvals = ApprovalInstance.objects.filter(
+                content_type=plan_content_type,
+                status__in=['pending', 'in_progress']
+            )
+            pending_total = pending_approvals.count()
+            pending_start = pending_approvals.filter(
+                workflow__code=PlanApprovalService.PLAN_START_WORKFLOW_CODE
+            ).count()
+            pending_cancel = pending_approvals.filter(
+                workflow__code=PlanApprovalService.PLAN_CANCEL_WORKFLOW_CODE
+            ).count()
             
             context['management_view'] = {
                 'pending_total': pending_total,
@@ -470,7 +493,7 @@ def plan_management_home(request):
             
             for subordinate in subordinates[:10]:  # 最多显示10个下属
                 # 获取下属的计划
-                subordinate_plans = Plan.objects.filter(
+                subordinate_plans = plan_base.filter(
                     Q(owner=subordinate) | Q(responsible_person=subordinate) | Q(created_by=subordinate)
                 ).distinct()
                 
@@ -504,7 +527,7 @@ def plan_management_home(request):
             # 获取下属的目标统计
             subordinate_goal_stats = []
             for subordinate in subordinates[:10]:
-                subordinate_goals = StrategicGoal.objects.filter(
+                subordinate_goals = goal_base.filter(
                     Q(owner=subordinate) | Q(responsible_person=subordinate) | Q(created_by=subordinate)
                 ).distinct()
                 
@@ -560,7 +583,7 @@ def plan_management_home(request):
             
             for subordinate in subordinates[:10]:
                 # 下属协作的计划（作为参与者，排除自己负责的）
-                sub_collab_plans = Plan.objects.filter(participants=subordinate).exclude(responsible_person=subordinate)
+                sub_collab_plans = plan_base.filter(participants=subordinate).exclude(responsible_person=subordinate)
                 sub_collab_plan_total = sub_collab_plans.count()
                 sub_collab_plan_in_progress = sub_collab_plans.filter(status='in_progress').count()
                 sub_collab_plan_overdue = sub_collab_plans.filter(
@@ -581,7 +604,7 @@ def plan_management_home(request):
                 subordinate_collaboration_plan_summary['overdue'] += sub_collab_plan_overdue
                 
                 # 下属协作的目标（作为参与者，排除自己负责的）
-                sub_collab_goals = StrategicGoal.objects.filter(participants=subordinate).exclude(responsible_person=subordinate)
+                sub_collab_goals = goal_base.filter(participants=subordinate).exclude(responsible_person=subordinate)
                 sub_collab_goal_total = sub_collab_goals.count()
                 sub_collab_goal_in_progress = sub_collab_goals.filter(status='in_progress').count()
                 sub_collab_goal_overdue = sub_collab_goals.filter(
@@ -886,12 +909,12 @@ def plan_management_home(request):
     if 'responsible_person' in plan_fields:
         if filter_responsible_person_id:
             # 筛选了负责人，查询该负责人负责的计划（所有级别）
-            my_plans_qs = Plan.objects.filter(responsible_person_id=filter_responsible_person_id).order_by('-updated_time')
+            my_plans_qs = plan_base.filter(responsible_person_id=filter_responsible_person_id).order_by('-updated_time')
         else:
             # 没有筛选负责人，查询当前用户负责的所有计划（个人计划+公司计划，月/周/日卡片一致展示）
-            my_plans_qs = Plan.objects.filter(responsible_person=request.user).order_by('-updated_time')
+            my_plans_qs = plan_base.filter(responsible_person=request.user).order_by('-updated_time')
     else:
-        my_plans_qs = Plan.objects.none()
+        my_plans_qs = plan_base.none()
     
     # 应用其他筛选条件（部门、日期）
     my_plans_qs = apply_filters_to_queryset(my_plans_qs, 'plan')
@@ -912,13 +935,11 @@ def plan_management_home(request):
     # 如果筛选了负责人，查询该负责人负责的目标（所有级别）；否则查询当前用户负责的所有目标（个人+公司）
     if 'responsible_person' in goal_fields:
         if filter_responsible_person_id:
-            # 筛选了负责人，查询该负责人负责的目标（所有级别）
-            my_goals_qs = StrategicGoal.objects.filter(responsible_person_id=filter_responsible_person_id).order_by('-updated_time')
+            my_goals_qs = goal_base.filter(responsible_person_id=filter_responsible_person_id).order_by('-updated_time')
         else:
-            # 没有筛选负责人，查询当前用户负责的所有目标（个人目标+公司目标）
-            my_goals_qs = StrategicGoal.objects.filter(responsible_person=request.user).order_by('-updated_time')
+            my_goals_qs = goal_base.filter(responsible_person=request.user).order_by('-updated_time')
     else:
-        my_goals_qs = StrategicGoal.objects.none()
+        my_goals_qs = goal_base.none()
     
     # 应用其他筛选条件（部门、日期）
     my_goals_qs = apply_filters_to_queryset(my_goals_qs, 'goal')
@@ -975,26 +996,22 @@ def plan_management_home(request):
     
     # 预先定义所有需要的查询集（用于"全部"分类）
     # 下属负责的查询集（与统计卡片保持一致：owner、responsible_person、created_by）
-    subordinate_responsible_plans_qs = Plan.objects.none()
-    subordinate_responsible_goals_qs = StrategicGoal.objects.none()
+    subordinate_responsible_plans_qs = plan_base.none()
+    subordinate_responsible_goals_qs = goal_base.none()
     if is_manager and subordinates.exists():
         from django.db.models import Q
-        # 根据筛选条件决定查询逻辑
         if filter_responsible_person_id:
-            # 筛选了负责人，如果该负责人是下属，查询该负责人负责的计划/目标
             if User.objects.filter(id=filter_responsible_person_id, id__in=subordinates).exists():
-                subordinate_responsible_plans_qs = Plan.objects.filter(responsible_person_id=filter_responsible_person_id)
-                subordinate_responsible_goals_qs = StrategicGoal.objects.filter(responsible_person_id=filter_responsible_person_id)
+                subordinate_responsible_plans_qs = plan_base.filter(responsible_person_id=filter_responsible_person_id)
+                subordinate_responsible_goals_qs = goal_base.filter(responsible_person_id=filter_responsible_person_id)
             else:
-                # 筛选的负责人不是下属，返回空查询集
-                subordinate_responsible_plans_qs = Plan.objects.none()
-                subordinate_responsible_goals_qs = StrategicGoal.objects.none()
+                subordinate_responsible_plans_qs = plan_base.none()
+                subordinate_responsible_goals_qs = goal_base.none()
         else:
-            # 没有筛选负责人，查询所有下属的计划/目标（包含 owner、responsible_person、created_by）
-            subordinate_responsible_plans_qs = Plan.objects.filter(
+            subordinate_responsible_plans_qs = plan_base.filter(
                 Q(owner__in=subordinates) | Q(responsible_person__in=subordinates) | Q(created_by__in=subordinates)
             ).distinct()
-            subordinate_responsible_goals_qs = StrategicGoal.objects.filter(
+            subordinate_responsible_goals_qs = goal_base.filter(
                 Q(owner__in=subordinates) | Q(responsible_person__in=subordinates) | Q(created_by__in=subordinates)
             ).distinct()
         # 应用其他筛选条件（部门、日期）
@@ -1005,34 +1022,33 @@ def plan_management_home(request):
     # 根据筛选条件决定查询逻辑
     if filter_responsible_person_id:
         # 筛选了负责人，查询该负责人负责的计划/目标（不限制参与者）
-        my_collaboration_plans_qs = Plan.objects.filter(responsible_person_id=filter_responsible_person_id)
-        my_collaboration_goals_qs = StrategicGoal.objects.filter(responsible_person_id=filter_responsible_person_id)
+        my_collaboration_plans_qs = plan_base.filter(responsible_person_id=filter_responsible_person_id)
+        my_collaboration_goals_qs = goal_base.filter(responsible_person_id=filter_responsible_person_id)
     else:
         # 没有筛选负责人，查询当前用户作为参与者的计划/目标（排除自己负责的）
-        my_collaboration_plans_qs = Plan.objects.filter(participants=request.user).exclude(responsible_person=request.user)
-        my_collaboration_goals_qs = StrategicGoal.objects.filter(participants=request.user).exclude(responsible_person=request.user)
+        my_collaboration_plans_qs = plan_base.filter(participants=request.user).exclude(responsible_person=request.user)
+        my_collaboration_goals_qs = goal_base.filter(participants=request.user).exclude(responsible_person=request.user)
     # 应用其他筛选条件（部门、日期）
     my_collaboration_plans_qs = apply_filters_to_queryset(my_collaboration_plans_qs, 'plan')
     my_collaboration_goals_qs = apply_filters_to_queryset(my_collaboration_goals_qs, 'goal')
     
     # 下属协作的查询集
-    subordinate_collaboration_plans_qs = Plan.objects.none()
-    subordinate_collaboration_goals_qs = StrategicGoal.objects.none()
+    subordinate_collaboration_plans_qs = plan_base.none()
+    subordinate_collaboration_goals_qs = goal_base.none()
     if is_manager and subordinates.exists():
         # 根据筛选条件决定查询逻辑
         if filter_responsible_person_id:
             # 筛选了负责人，如果该负责人是下属，查询该负责人负责的计划/目标
             if filter_responsible_person_id and User.objects.filter(id=filter_responsible_person_id, id__in=subordinates).exists():
-                subordinate_collaboration_plans_qs = Plan.objects.filter(responsible_person_id=filter_responsible_person_id)
-                subordinate_collaboration_goals_qs = StrategicGoal.objects.filter(responsible_person_id=filter_responsible_person_id)
+                subordinate_collaboration_plans_qs = plan_base.filter(responsible_person_id=filter_responsible_person_id)
+                subordinate_collaboration_goals_qs = goal_base.filter(responsible_person_id=filter_responsible_person_id)
             else:
-                # 筛选的负责人不是下属，返回空查询集
-                subordinate_collaboration_plans_qs = Plan.objects.none()
-                subordinate_collaboration_goals_qs = StrategicGoal.objects.none()
+                subordinate_collaboration_plans_qs = plan_base.none()
+                subordinate_collaboration_goals_qs = goal_base.none()
         else:
             # 没有筛选负责人，查询下属作为参与者的计划/目标（排除下属负责的）
-            subordinate_collaboration_plans_qs = Plan.objects.filter(participants__in=subordinates).exclude(responsible_person__in=subordinates)
-            subordinate_collaboration_goals_qs = StrategicGoal.objects.filter(participants__in=subordinates).exclude(responsible_person__in=subordinates)
+            subordinate_collaboration_plans_qs = plan_base.filter(participants__in=subordinates).exclude(responsible_person__in=subordinates)
+            subordinate_collaboration_goals_qs = goal_base.filter(participants__in=subordinates).exclude(responsible_person__in=subordinates)
         # 应用其他筛选条件（部门、日期）
         subordinate_collaboration_plans_qs = apply_filters_to_queryset(subordinate_collaboration_plans_qs, 'plan')
         subordinate_collaboration_goals_qs = apply_filters_to_queryset(subordinate_collaboration_goals_qs, 'goal')
@@ -1425,8 +1441,8 @@ def plan_management_home(request):
     
     my_collaboration_risk_items = []
     
-    # 查询用户参与但非负责人的未完成计划
-    collaboration_plans = Plan.objects.filter(
+    # 查询用户参与但非负责人的未完成计划（P0-5: 仅当前公司）
+    collaboration_plans = plan_base.filter(
         participants=request.user,
         level='personal',
         status__in=['draft', 'published', 'accepted', 'in_progress']
@@ -1439,8 +1455,8 @@ def plan_management_home(request):
             time_progress = _calculate_time_progress_plan(plan, now)
             my_collaboration_risk_items.append(_build_risk_item('plan_risk', plan, actual_progress, time_progress, plan.status))
     
-    # 查询用户参与但非负责人的未完成目标
-    collaboration_goals = StrategicGoal.objects.filter(
+    # 查询用户参与但非负责人的未完成目标（P0: 按部门公司隔离）
+    collaboration_goals = goal_base.filter(
         participants=request.user,
         level='personal',
         status__in=['published', 'accepted', 'in_progress']

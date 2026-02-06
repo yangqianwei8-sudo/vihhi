@@ -166,12 +166,16 @@ class DecisionApproveRejectVisibilityTests(TestCase):
         self.client_b.force_login(self.user_b)
         self.goal_a = _make_goal(self.user_a, self.user_a)
         self.plan_a = _make_plan(self.user_a, self.user_a, self.goal_a)
+        # G1-4: PlanDecision 已退场，此处的 create 仅用于测试历史数据的权限和可见性
+        # 测试需要创建历史 PlanDecision 数据来验证权限控制逻辑
+        # 实际业务中不再创建新的 PlanDecision，统一使用 WorkflowEngine
         self.decision = PlanDecision.objects.create(
             plan=self.plan_a,
             request_type="start",
             decision=None,
             requested_by=self.user_a,
             reason="test",
+            _allow_create_for_test=True,  # 测试专用标志，绕过 save() 的创建限制
         )
 
     def test_decision_approve_other_plan_returns_404(self):

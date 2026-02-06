@@ -17,6 +17,7 @@
 {% endblock module_styles %}
 
 {% block module_extra_css %}
+<link rel="stylesheet" href="{% static 'css/plan/plan-decompose.css' %}">
 <style>
   /* 列板布局：左侧计划树，右侧表单和统计 */
   .decompose-column-layout {
@@ -431,8 +432,8 @@
             <li class="plan-tree-item" data-level="{{ level }}">
               <div class="plan-card" data-level="{{ level }}">
                 <div class="plan-card-header">
-                  <div style="flex: 1;">
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                  <div class="pd-flex-1">
+                    <div class="pd-flex-row">
                       <h4 class="plan-card-title">
                         <a href="{% url 'plan_pages:plan_detail' plan_item.id %}">
                           {{ plan_item.name }}
@@ -450,14 +451,14 @@
                 </div>
 
                 <div class="plan-card-info">
-                  <div style="margin-bottom: 8px;">
+                  <div class="pd-mb-8">
                     <span>
                       <strong>开始：</strong>{{ plan_item.start_time|date:"Y-m-d" }}
                     </span>
-                    <span style="margin-left: 16px;">
+                    <span class="pd-ml-16">
                       <strong>结束：</strong>{{ plan_item.end_time|date:"Y-m-d" }}
                     </span>
-                    <span style="margin-left: 16px;">
+                    <span class="pd-ml-16">
                       <strong>进度：</strong>{{ plan_item.progress }}%
                     </span>
                   </div>
@@ -467,12 +468,12 @@
                       <strong>负责人：</strong>{{ plan_item.responsible_person.get_full_name|default:plan_item.responsible_person.username }}
                     </span>
                     {% if plan_item.responsible_department %}
-                    <span style="margin-left: 16px;">
+                    <span class="pd-ml-16">
                       <strong>部门：</strong>{{ plan_item.responsible_department.name }}
                     </span>
                     {% endif %}
                     {% if plan_item.related_goal %}
-                    <span style="margin-left: 16px;">
+                    <span class="pd-ml-16">
                       <strong>关联目标：</strong>{{ plan_item.related_goal.name }}
                     </span>
                     {% endif %}
@@ -645,10 +646,10 @@
               <span class="stats-item-value">{{ plan.progress|floatformat:0 }}%</span>
             </li>
             {% if child_plans_summary and child_plans_summary.display_mode != 'none' %}
-            <li class="stats-item" style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 8px;">
+            <li class="stats-item pd-stats-border">
               <span class="stats-item-label">子计划汇总</span>
-              <div style="margin-top: 4px;">
-                <div style="font-size: 0.85rem; color: #6B7280;">
+              <div class="pd-stats-inner">
+                <div class="pd-stats-meta">
                   平均进度：{{ child_plans_summary.avg_progress|floatformat:1 }}%
                 </div>
               </div>
@@ -662,20 +663,5 @@
 {% endblock pm_content %}
 
 {% block module_extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 表单验证和提交处理（如果需要 AJAX 提交可以在这里添加）
-    const form = document.querySelector('form[action*="plan_create"]');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            // 可以在这里添加前端验证
-            if (!form.checkValidity()) {
-                e.preventDefault();
-                form.reportValidity();
-                return false;
-            }
-        });
-    }
-});
-</script>
+<script src="{% static 'js/plan/plan-decompose.js' %}"></script>
 {% endblock module_extra_js %}

@@ -227,6 +227,7 @@ class ArchiveBorrowForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         # 限制项目文档选择
         self.fields['project_document'].queryset = ProjectArchiveDocument.objects.filter(
@@ -236,11 +237,12 @@ class ArchiveBorrowForm(forms.ModelForm):
         self.fields['administrative_archive'].queryset = AdministrativeArchive.objects.filter(
             status='archived'
         ).order_by('-created_time')
-        # 限制部门选择
+        # 限制部门选择（P0-3: 按当前用户公司过滤）
         from backend.apps.system_management.models import Department
-        self.fields['borrower_department'].queryset = Department.objects.filter(
-            is_active=True
-        ).order_by('name')
+        dept_qs = Department.objects.filter(is_active=True).order_by('name')
+        if request and getattr(request.user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=request.user.company_id)
+        self.fields['borrower_department'].queryset = dept_qs
     
     def clean(self):
         cleaned_data = super().clean()

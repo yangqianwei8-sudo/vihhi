@@ -196,6 +196,7 @@ class UserAdmin(DjangoUserAdmin):
         'get_full_name',
         'email',
         'phone',
+        'company',  # P0-2: 显示所属公司
         'department',
         'position',
         'get_user_type_display',
@@ -205,13 +206,13 @@ class UserAdmin(DjangoUserAdmin):
         'is_superuser',
         'date_joined',
     )
-    list_filter = ('user_type', 'department', 'is_active', 'is_staff', 'is_superuser', 'date_joined', 'profile_completed')
+    list_filter = ('user_type', 'company', 'department', 'is_active', 'is_staff', 'is_superuser', 'date_joined', 'profile_completed')  # P0-2: 添加company过滤
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone', 'position')
     ordering = ('-date_joined',)
     list_per_page = 50
     date_hierarchy = 'date_joined'
     filter_horizontal = ('roles',)
-    raw_id_fields = ('department',)
+    raw_id_fields = ('department', 'company', 'manager')  # P0-2: 添加company到raw_id_fields
     readonly_fields = ('last_login', 'date_joined', 'created_time', 'updated_time')
     
     fieldsets = (
@@ -222,7 +223,7 @@ class UserAdmin(DjangoUserAdmin):
             'fields': ('first_name', 'last_name', 'email', 'phone', 'avatar')
         }),
         ('组织信息', {
-            'fields': ('department', 'position', 'user_type', 'client_type')
+            'fields': ('company', 'department', 'position', 'user_type', 'client_type', 'manager')  # P0-2: 添加company字段
         }),
         ('权限信息', {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'roles')
@@ -242,7 +243,7 @@ class UserAdmin(DjangoUserAdmin):
         }),
         ('组织信息', {
             'classes': ('wide',),
-            'fields': ('department', 'position', 'is_staff', 'is_superuser'),
+            'fields': ('company', 'department', 'position', 'is_staff', 'is_superuser'),  # P0-2: 添加company字段
         }),
     )
     

@@ -417,7 +417,24 @@
       });
     }
     document.addEventListener('click', function(e) {
-      var el = e.target && (e.target.closest ? e.target.closest('[data-action="preview-image"]') : null);
+      var el = e.target && (e.target.closest ? e.target.closest('[data-action="confirm-before-navigate"]') : null);
+      if (el && el.getAttribute && el.getAttribute('href')) {
+        e.preventDefault();
+        var msg = el.getAttribute('data-confirm-message') || '确定要继续吗？';
+        if (confirm(msg)) {
+          window.location.href = el.getAttribute('href');
+        }
+      }
+      el = e.target && (e.target.closest ? e.target.closest('[data-action="confirm-before-submit"]') : null);
+      if (el) {
+        e.preventDefault();
+        var msg = el.getAttribute('data-confirm-message') || '确定要继续吗？';
+        if (confirm(msg)) {
+          var form = el.closest('form');
+          if (form) form.submit();
+        }
+      }
+      el = e.target && (e.target.closest ? e.target.closest('[data-action="preview-image"]') : null);
       if (el && el.dataset && el.dataset.imageUrl) {
         e.preventDefault();
         previewImage(el.dataset.imageUrl);
@@ -485,6 +502,11 @@
       console.error('[ui.js] create form init error:', e);
     }
   }
+
+  document.addEventListener('change', function(e) {
+    var el = e.target && e.target.closest ? e.target.closest('[data-action="submit-parent-form"]') : null;
+    if (el && el.form) el.form.submit();
+  }, true);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', run);

@@ -147,7 +147,8 @@
                 return;
             }
             
-            const container = document.getElementById(this.config.containerId);
+            const container = document.querySelector('[data-role="filter-fields"]') ||
+                             document.getElementById(this.config.containerId);
             if (!container) {
                 console.warn('筛选容器未找到，无法启动DOM监听');
                 return;
@@ -166,9 +167,10 @@
                     // 检查是否有节点添加或删除
                     if (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) {
                         const isFilterRelated = (node) => node.nodeType === 1 && (
+                            node.getAttribute('data-role') === 'filter-field' ||
                             node.classList?.contains('filter-row') ||
                             node.classList?.contains('list-page-filter-item') ||
-                            (node.querySelector && node.querySelector('.filter-row, .list-page-filter-item')));
+                            (node.querySelector && node.querySelector('[data-role="filter-field"], .filter-row, .list-page-filter-item')));
                         mutation.addedNodes.forEach(node => { if (isFilterRelated(node)) shouldUpdate = true; });
                         mutation.removedNodes.forEach(node => { if (isFilterRelated(node)) shouldUpdate = true; });
                     }
@@ -212,7 +214,8 @@
          */
         fixSettingsButtonPosition() {
             const settingsBtn = document.getElementById(this.config.settingsBtnId);
-            const container = document.getElementById(this.config.containerId);
+            const container = document.querySelector('[data-role="filter-fields"]') ||
+                             document.getElementById(this.config.containerId);
             
             if (settingsBtn && container) {
                 // 确保容器有相对定位
@@ -275,20 +278,21 @@
          * 每个格子需有 data-filter-key 或内部 input/select 的 name，作为字段 key，用于模态框列表与显隐/排序。
          */
         initializeFilterFields() {
-            const container = document.getElementById(this.config.containerId) ||
+            const container = document.querySelector('[data-role="filter-fields"]') ||
+                             document.getElementById(this.config.containerId) ||
                              document.getElementById('filterForm') ||
                              document.querySelector('.list-page-filter-row');
             if (!container) {
-                console.warn(`筛选条件容器 ${this.config.containerId} 或 filterForm 未找到`);
+                console.warn(`筛选条件容器未找到`);
                 return [];
             }
             // 只在表单内查找筛选项，避免误匹配到容器外元素
-            const form = container.tagName === 'FORM' ? container : container.querySelector('form#filterForm') || container.querySelector('form') || container;
+            const form = container.tagName === 'FORM' ? container : container.querySelector('[data-role="filter-form"]') || container.querySelector('form#filterForm') || container.querySelector('form') || container;
             const fields = [];
             const seenKeys = new Set();
 
-            // 1. 查找显式标记的字段：.list-page-filter-item 或 .filter-row（限定在 form 内）
-            const selectors = '.list-page-filter-item, .filter-row';
+            // 1. 查找显式标记的字段：使用 data-role="filter-field" 优先，回退到 .list-page-filter-item 或 .filter-row（限定在 form 内）
+            const selectors = '[data-role="filter-field"], .list-page-filter-item, .filter-row';
             const filterRows = form.querySelectorAll(selectors);
 
             filterRows.forEach(row => {
@@ -325,7 +329,7 @@
                     if (!name || seenKeys.has(name)) return;
                     if (control.type === 'hidden' || control.type === 'submit' || control.type === 'button') return;
 
-                    const wrapper = control.closest('.list-page-filter-item, .filter-row');
+                    const wrapper = control.closest('[data-role="filter-field"], .list-page-filter-item, .filter-row');
                     if (wrapper) return; // 已由第 1 步处理
 
                     const row = control.parentElement;
@@ -336,6 +340,7 @@
                     seenKeys.add(safeKey);
 
                     row.setAttribute('data-filter-key', safeKey);
+                    row.setAttribute('data-role', 'filter-field');
                     if (!row.classList.contains('list-page-filter-item') && !row.classList.contains('filter-row')) {
                         row.classList.add('list-page-filter-item');
                     }
@@ -550,9 +555,10 @@
             let container = null;
             
             try {
-                container = document.getElementById(this.config.containerId);
+                container = document.querySelector('[data-role="filter-fields"]') ||
+                           document.getElementById(this.config.containerId);
                 if (!container) {
-                    console.warn(`筛选条件容器 ${this.config.containerId} 未找到`);
+                    console.warn(`筛选条件容器未找到`);
                     return;
                 }
                 
@@ -561,8 +567,8 @@
                     this.mutationObserver.disconnect();
                 }
 
-                // 获取所有筛选行（支持 .list-page-filter-item、.filter-row 及带 data-filter-key 的包装元素）
-                const allRows = container.querySelectorAll('.list-page-filter-item, .filter-row, [data-filter-key]');
+                // 获取所有筛选行（优先使用 data-role="filter-field"，回退到 .list-page-filter-item、.filter-row 及带 data-filter-key 的包装元素）
+                const allRows = container.querySelectorAll('[data-role="filter-field"], .list-page-filter-item, .filter-row, [data-filter-key]');
                 const filterRows = Array.from(allRows).filter(el => {
                     const key = el.getAttribute('data-filter-key');
                     return key && el.querySelector && (el.querySelector('input, select, textarea') || el.matches('input, select, textarea'));
@@ -642,7 +648,10 @@
             });
 
             // 3. 按顺序重新添加：放入 form 内，保证「筛选/重置」按钮仍在基模定义的最后一格
-            const form = container.querySelector('form') || document.getElementById('filterForm');
+            const form = container.querySelector('[data-role="filter-form"]') ||
+                        container.querySelector('form#filterForm') ||
+                        container.querySelector('form') ||
+                        document.getElementById('filterForm');
             const appendTarget = form && container.contains(form) ? form : container;
             orderedRows.forEach(({ row, key }) => {
                 try {
@@ -957,8 +966,10 @@
             
             // 事件委托：在筛选区域上监听点击（当按 ID 找不到按钮时使用）
             const delegateBind = () => {
-                const container = document.getElementById(this.config.containerId);
-                const filterCard = container ? container.closest('.list-page-filters') : null;
+                const container = document.querySelector('[data-role="filter-fields"]') ||
+                               document.getElementById(this.config.containerId);
+                const filterCard = container ? container.closest('[data-role="list-filters"]') ||
+                                         container.closest('.list-page-filters') : null;
                 const root = filterCard || document.body;
                 const delegatedClick = (e) => {
                     const byId = e.target.closest('[id="' + this.config.settingsBtnId + '"]');

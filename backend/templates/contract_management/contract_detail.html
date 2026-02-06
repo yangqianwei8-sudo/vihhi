@@ -220,7 +220,7 @@
                     {% for transition in valid_transitions %}
                         {% if transition.code != 'party_b_signed' and transition.code != 'signed' %}
                         <li>
-                            <button class="dropdown-item" type="button" data-action="contract-detail-status-transition" data-code="{{ transition.code }}" data-label="{{ transition.label }}">
+                            <button class="dropdown-item" type="button" data-action="contract-detail-sign-modal" data-code="{{ transition.code }}" data-label="{{ transition.label }}">
                                 → {{ transition.label }}
                             </button>
                         </li>
@@ -332,9 +332,9 @@
                             </div>
                         </div>
                         {% if record.comment %}
-                        <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">{{ record.comment }}</p>
+                        <p class="mb-0 mt-1 contract-detail-text-13-gray">{{ record.comment }}</p>
                         {% endif %}
-                        <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">{{ record.approval_time|date:"Y-m-d H:i" }}</p>
+                        <p class="mb-0 mt-1 contract-detail-text-12-muted">{{ record.approval_time|date:"Y-m-d H:i" }}</p>
                     </div>
                     {% endfor %}
                 </div>
@@ -377,24 +377,7 @@
         </div>
     </div>
 
-    <script>
-    function showStatusTransitionModal(statusCode, statusLabel) {
-        document.getElementById('target_status_input').value = statusCode;
-        document.getElementById('target_status_display').value = statusLabel;
-        const modal = new bootstrap.Modal(document.getElementById('statusTransitionModal'));
-        modal.show();
-    }
-
-    function showSignModal(statusCode, statusLabel) {
-        document.getElementById('sign_target_status_input').value = statusCode;
-        document.getElementById('sign_target_status_display').value = statusLabel;
-        const modal = new bootstrap.Modal(document.getElementById('signModal'));
-        modal.show();
-    }
-
-    // 状态流转与签章按钮已通过 onclick="showSignModal(...)" 直接绑定，此处无需重复绑定
-
-</script>
+    <script src="{% static 'js/contract/contract-detail.js' %}"></script>
 
     <div class="modal fade" id="signModal" tabindex="-1" aria-labelledby="signModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -470,12 +453,12 @@
         {% if contract.description %}
         <div class="mt-3">
             <span class="info-label">合同描述</span>
-            <p class="mt-2" style="color: #374151; font-size: 14px;">{{ contract.description }}</p>
+            <p class="mt-2 contract-detail-text-14">{{ contract.description }}</p>
         </div>
         {% endif %}
     </div>
 
-    <div class="info-card" style="border: 2px solid #059669; background-color: #f0fdf4;">
+    <div class="info-card contract-detail-card-success">
         <h5>🎯 商机信息</h5>
         {% if contract.opportunity %}
         <div class="info-grid">
@@ -530,7 +513,7 @@
             {% if contract.opportunity.weighted_amount %}
             <div class="info-item">
                 <span class="info-label">加权金额</span>
-                <span class="info-value" style="color: #059669;">¥{{ contract.opportunity.weighted_amount|floatformat:2 }} 万元</span>
+                <span class="info-value contract-detail-value-success">¥{{ contract.opportunity.weighted_amount|floatformat:2 }} 万元</span>
             </div>
             {% endif %}
             {% if contract.opportunity.expected_sign_date %}
@@ -550,9 +533,9 @@
                 <span class="info-label">紧急程度</span>
                 <span class="info-value">
                     {% if contract.opportunity.urgency == 'very_urgent' %}
-                        <span style="color: #dc2626; font-weight: 600;">特急</span>
+                        <span class="contract-detail-value-danger">特急</span>
                     {% elif contract.opportunity.urgency == 'urgent' %}
-                        <span style="color: #f59e0b; font-weight: 600;">紧急</span>
+                        <span class="contract-detail-value-warning">紧急</span>
                     {% else %}
                         普通
                     {% endif %}
@@ -563,7 +546,7 @@
         {% if contract.opportunity.description %}
         <div class="mt-3">
             <span class="info-label">商机描述</span>
-            <p class="mt-2" style="color: #374151; font-size: 14px;">{{ contract.opportunity.description|linebreaks }}</p>
+            <p class="mt-2 contract-detail-text-14">{{ contract.opportunity.description|linebreaks }}</p>
         </div>
         {% endif %}
         <div class="mt-3">
@@ -573,7 +556,7 @@
         </div>
         {% else %}
         <div class="empty-state">
-            <p style="color: #6b7280; margin: 20px 0;">未关联商机</p>
+            <p class="contract-detail-empty-p">未关联商机</p>
         </div>
         {% endif %}
     </div>
@@ -584,7 +567,7 @@
         <div class="info-grid">
             <div class="info-item">
                 <span class="info-label">合同金额（含税）</span>
-                <span class="info-value" style="font-size: 18px; color: #059669; font-weight: 700;">¥{{ contract.contract_amount|floatformat:2 }}</span>
+                <span class="info-value contract-detail-amount-lg">¥{{ contract.contract_amount|floatformat:2 }}</span>
             </div>
             <div class="info-item">
                 <span class="info-label">合同金额（不含税）</span>
@@ -604,11 +587,11 @@
             </div>
             <div class="info-item">
                 <span class="info-label">已回款金额</span>
-                <span class="info-value" style="color: #059669;">¥{{ contract.payment_amount|default:"0.00"|floatformat:2 }}</span>
+                <span class="info-value contract-detail-value-success">¥{{ contract.payment_amount|default:"0.00"|floatformat:2 }}</span>
             </div>
             <div class="info-item">
                 <span class="info-label">未回款金额</span>
-                <span class="info-value" style="color: #dc2626;">¥{{ contract.unpaid_amount|default:"0.00"|floatformat:2 }}</span>
+                <span class="info-value contract-detail-value-danger">¥{{ contract.unpaid_amount|default:"0.00"|floatformat:2 }}</span>
             </div>
         </div>
     </div>
@@ -736,9 +719,9 @@
     <div class="info-card">
         <h5>💳 回款计划 ({{ payment_plans.count }})</h5>
         {% if payment_plans %}
-        <div style="margin-bottom: 12px;">
+        <div class="contract-detail-mb-12">
             {% for plan in payment_plans %}
-            <a href="{% url 'settlement_pages:payment_record_create' 'business' plan.id %}" class="btn btn-sm btn-outline-primary me-2" style="margin-bottom: 4px;">为"{{ plan.phase_name }}"添加回款记录</a>
+            <a href="{% url 'settlement_pages:payment_record_create' 'business' plan.id %}" class="btn btn-sm btn-outline-primary me-2" class="contract-detail-btn-mb">为"{{ plan.phase_name }}"添加回款记录</a>
             {% endfor %}
         </div>
         {% endif %}
@@ -747,25 +730,25 @@
         <div class="payment-plan-item">
             <div>
                 <strong>{{ plan.phase_name }}</strong>
-                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">{{ plan.phase_description|default:"无描述" }}</p>
-                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">计划日期：{{ plan.planned_date|date:"Y-m-d" }} | 状态：<span class="status-badge {{ plan.status }}">{{ plan.get_status_display }}</span></p>
+                <p class="mb-0 mt-1" class="contract-detail-text-13-gray">{{ plan.phase_description|default:"无描述" }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-12-muted">计划日期：{{ plan.planned_date|date:"Y-m-d" }} | 状态：<span class="status-badge {{ plan.status }}">{{ plan.get_status_display }}</span></p>
                 {% comment %}显示该回款计划的回款记录统计{% endcomment %}
                 {% with plan_records=payment_records|default_if_none:"" %}
                 {% if plan_records %}
                     {% for record in plan_records %}
                         {% if record.payment_plan_id == plan.id %}
-                            <p class="mb-0 mt-1" style="font-size: 12px; color: #059669;">✓ 已回款：¥{{ record.payment_amount|floatformat:2 }} ({{ record.payment_date|date:"Y-m-d" }})</p>
+                            <p class="mb-0 mt-1" class="contract-detail-text-12-muted contract-detail-value-success">✓ 已回款：¥{{ record.payment_amount|floatformat:2 }} ({{ record.payment_date|date:"Y-m-d" }})</p>
                         {% endif %}
                     {% endfor %}
                 {% endif %}
                 {% endwith %}
             </div>
             <div class="text-end">
-                <div style="font-size: 18px; font-weight: 700; color: #059669;">¥{{ plan.planned_amount|floatformat:2 }}</div>
+                <div class="contract-detail-amount-lg">¥{{ plan.planned_amount|floatformat:2 }}</div>
                 {% if plan.actual_amount %}
-                <div style="font-size: 14px; color: #6b7280;">实际：¥{{ plan.actual_amount|floatformat:2 }}</div>
+                <div class="contract-detail-amount-sm">实际：¥{{ plan.actual_amount|floatformat:2 }}</div>
                 {% endif %}
-                <div style="margin-top: 8px;">
+                <div class="contract-detail-mt-8">
                     <a href="{% url 'settlement_pages:payment_record_create' 'business' plan.id %}" class="btn btn-sm btn-primary me-1">添加回款</a>
                     <a href="{% url 'admin:customer_management_businesspaymentplan_change' plan.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">编辑</a>
                 </div>
@@ -783,9 +766,9 @@
     <div class="info-card">
         <h5>💰 回款记录 ({{ payment_records|length }})</h5>
         {% if payment_plans %}
-        <div style="margin-bottom: 12px;">
+        <div class="contract-detail-mb-12">
             {% for plan in payment_plans %}
-            <a href="{% url 'settlement_pages:payment_record_create' 'business' plan.id %}" class="btn btn-sm btn-outline-primary me-2" style="margin-bottom: 4px;">为"{{ plan.phase_name }}"添加回款记录</a>
+            <a href="{% url 'settlement_pages:payment_record_create' 'business' plan.id %}" class="btn btn-sm btn-outline-primary me-2" class="contract-detail-btn-mb">为"{{ plan.phase_name }}"添加回款记录</a>
             {% endfor %}
         </div>
         {% endif %}
@@ -794,22 +777,22 @@
         <div class="payment-plan-item">
             <div>
                 <strong>{{ record.payment_number }}</strong>
-                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">回款日期：{{ record.payment_date|date:"Y-m-d" }} | 回款方式：{{ record.get_payment_method_display }} | 状态：<span class="status-badge {{ record.status }}">{{ record.get_status_display }}</span></p>
+                <p class="mb-0 mt-1" class="contract-detail-text-13-gray">回款日期：{{ record.payment_date|date:"Y-m-d" }} | 回款方式：{{ record.get_payment_method_display }} | 状态：<span class="status-badge {{ record.status }}">{{ record.get_status_display }}</span></p>
                 {% if record.invoice_number %}
-                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">发票号码：{{ record.invoice_number }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-12-muted">发票号码：{{ record.invoice_number }}</p>
                 {% endif %}
                 {% if record.bank_account %}
-                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">收款账户：{{ record.bank_account }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-12-muted">收款账户：{{ record.bank_account }}</p>
                 {% endif %}
                 {% if record.notes %}
-                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">备注：{{ record.notes }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-12-muted">备注：{{ record.notes }}</p>
                 {% endif %}
                 {% if record.confirmed_by %}
-                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">确认人：{{ record.confirmed_by.get_full_name|default:record.confirmed_by.username }} | 确认时间：{{ record.confirmed_time|date:"Y-m-d H:i" }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-12-muted">确认人：{{ record.confirmed_by.get_full_name|default:record.confirmed_by.username }} | 确认时间：{{ record.confirmed_time|date:"Y-m-d H:i" }}</p>
                 {% endif %}
             </div>
             <div class="text-end">
-                <div style="font-size: 18px; font-weight: 700; color: #059669;">¥{{ record.payment_amount|floatformat:2 }}</div>
+                <div class="contract-detail-amount-lg">¥{{ record.payment_amount|floatformat:2 }}</div>
                 {% if record.receipt_voucher %}
                 <a href="{{ record.receipt_voucher.url }}" class="btn btn-sm btn-outline-primary mt-2" target="_blank">查看凭证</a>
                 {% endif %}
@@ -820,9 +803,9 @@
         <div class="empty-state">
             <p>暂无回款记录</p>
             {% if payment_plans %}
-            <p style="font-size: 12px; color: #9ca3af; margin-top: 8px;">请先创建回款计划，然后添加回款记录</p>
+            <p class="contract-detail-muted-p">请先创建回款计划，然后添加回款记录</p>
             {% else %}
-            <p style="font-size: 12px; color: #9ca3af; margin-top: 8px;">请先创建回款计划</p>
+            <p class="contract-detail-muted-p">请先创建回款计划</p>
             {% endif %}
         </div>
         {% endif %}
@@ -835,15 +818,15 @@
         <div class="file-item">
             <div>
                 <strong>{{ file.file_name }}</strong>
-                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">{{ file.get_file_type_display }} | 版本：{{ file.version }} | 上传时间：{{ file.uploaded_time|date:"Y-m-d H:i" }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-13-gray">{{ file.get_file_type_display }} | 版本：{{ file.version }} | 上传时间：{{ file.uploaded_time|date:"Y-m-d H:i" }}</p>
                 {% if file.description %}
-                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">{{ file.description }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-12-muted">{{ file.description }}</p>
                 {% endif %}
             </div>
             <div>
                 <a href="{% url 'contract_pages:contract_file_download' file.id %}" class="btn btn-sm btn-primary">下载</a>
                 {% if can_manage %}
-                <form method="post" action="{% url 'contract_pages:contract_file_delete' file.id %}" style="display: inline;" onsubmit="return confirm('确定要删除文件 {{ file.file_name }} 吗？');">
+                <form method="post" action="{% url 'contract_pages:contract_file_delete' file.id %}" class="contract-detail-form-inline" data-action="contract-detail-delete-confirm" data-message="确定要删除文件 {{ file.file_name }} 吗？">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-danger">删除</button>
                 </form>
@@ -866,9 +849,9 @@
         <div class="payment-plan-item">
             <div>
                 <strong>{{ approval.approver.get_full_name|default:approval.approver.username }}</strong>
-                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">审核层级：{{ approval.approval_level }}级 | 审核时间：{{ approval.approval_time|date:"Y-m-d H:i"|default:"待审核" }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-13-gray">审核层级：{{ approval.approval_level }}级 | 审核时间：{{ approval.approval_time|date:"Y-m-d H:i"|default:"待审核" }}</p>
                 {% if approval.comment %}
-                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">审核意见：{{ approval.comment }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-12-muted">审核意见：{{ approval.comment }}</p>
                 {% endif %}
             </div>
             <div>
@@ -886,13 +869,13 @@
         <div class="payment-plan-item">
             <div>
                 <strong>{{ change.get_change_type_display }}</strong>
-                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">变更日期：{{ change.change_date|date:"Y-m-d" }} | 创建人：{{ change.created_by.get_full_name|default:change.created_by.username }}</p>
-                <p class="mb-0 mt-1" style="font-size: 12px; color: #374151;">变更原因：{{ change.change_reason }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-13-gray">变更日期：{{ change.change_date|date:"Y-m-d" }} | 创建人：{{ change.created_by.get_full_name|default:change.created_by.username }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-12-muted contract-detail-text-14">变更原因：{{ change.change_reason }}</p>
                 {% if change.change_amount %}
-                <p class="mb-0 mt-1" style="font-size: 14px; font-weight: 600; color: #dc2626;">变更金额：¥{{ change.change_amount|floatformat:2 }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-change-amount">变更金额：¥{{ change.change_amount|floatformat:2 }}</p>
                 {% endif %}
                 {% if change.notes %}
-                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">备注：{{ change.notes }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-12-muted">备注：{{ change.notes }}</p>
                 {% endif %}
             </div>
         </div>
@@ -907,12 +890,12 @@
         <div class="payment-plan-item">
             <div>
                 <strong>{{ log.from_status_label }} → {{ log.to_status_label }}</strong>
-                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">
+                <p class="mb-0 mt-1" class="contract-detail-text-13-gray">
                     操作人：{{ log.actor.get_full_name|default:log.actor.username|default:"系统" }} |
                     操作时间：{{ log.created_time|date:"Y-m-d H:i:s" }}
                 </p>
                 {% if log.comment %}
-                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">备注：{{ log.comment }}</p>
+                <p class="mb-0 mt-1" class="contract-detail-text-12-muted">备注：{{ log.comment }}</p>
                 {% endif %}
             </div>
         </div>
@@ -927,7 +910,7 @@
         <div class="payment-plan-item">
             <div>
                 <strong><a href="{% url 'contract_pages:contract_detail' sub.id %}">{{ sub.contract_number }}</a></strong>
-                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">{{ sub.contract_name|default:sub.contract_number }} | {{ sub.get_contract_type_display }} | <span class="status-badge {{ sub.status }}">{{ sub.get_status_display }}</span></p>
+                <p class="mb-0 mt-1" class="contract-detail-text-13-gray">{{ sub.contract_name|default:sub.contract_number }} | {{ sub.get_contract_type_display }} | <span class="status-badge {{ sub.status }}">{{ sub.get_status_display }}</span></p>
             </div>
         </div>
         {% endfor %}
@@ -937,7 +920,7 @@
     {% if contract.notes %}
     <div class="info-card">
         <h5>📝 备注信息</h5>
-        <p style="color: #374151; font-size: 14px; line-height: 1.6;">{{ contract.notes|linebreaks }}</p>
+        <p class="contract-detail-notes-p">{{ contract.notes|linebreaks }}</p>
     </div>
     {% endif %}
 

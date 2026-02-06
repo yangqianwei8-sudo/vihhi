@@ -1,4 +1,5 @@
 {% extends "shared/detail_base.html" %}
+{% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
@@ -172,10 +173,10 @@
                         {% if can_review_items %}
                         <td>
                             {% if item.review_status == 'pending' %}
-                            <button type="button" class="btn btn-sm btn-success" onclick="reviewItem({{ item.id }}, 'approve')">
+                            <button type="button" class="btn btn-sm btn-success" data-action="settlement-review-item" data-item-id="{{ item.id }}" data-review-action="approve">
                                 <i class="bi bi-check"></i> 确认
                             </button>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="reviewItem({{ item.id }}, 'reject')">
+                            <button type="button" class="btn btn-sm btn-danger" data-action="settlement-review-item" data-item-id="{{ item.id }}" data-review-action="reject">
                                 <i class="bi bi-x"></i> 驳回
                             </button>
                             {% else %}
@@ -447,7 +448,7 @@
                         <input type="hidden" name="action" id="reviewAction">
                         <div id="itemInfo" class="mb-3"></div>
 
-                        <div id="approveSection" style="display: none;">
+                        <div id="approveSection" class="d-none">
                             <div class="mb-3">
                                 <label class="form-label">调整后节省金额</label>
                                 <input type="number" class="form-control" name="adjusted_saving_amount" id="adjustedSavingAmount" step="0.01" placeholder="留空则使用原始金额">
@@ -463,7 +464,7 @@
                             </div>
                         </div>
 
-                        <div id="rejectSection" style="display: none;">
+                        <div id="rejectSection" class="d-none">
                             <div class="mb-3">
                                 <label class="form-label required">驳回原因</label>
                                 <textarea class="form-control" name="rejection_reason" id="rejectionReason" rows="3" placeholder="请填写驳回原因" required></textarea>
@@ -483,106 +484,6 @@
 
 {% endblock %}
 {% block extra_js %}
-<script>
-// 审核明细项
-function reviewItem(itemId, action) {
-    const modal = new bootstrap.Modal(document.getElementById('reviewItemModal'));
-    const form = document.getElementById('reviewItemForm');
-    const actionInput = document.getElementById('reviewAction');
-    const approveSection = document.getElementById('approveSection');
-    const rejectSection = document.getElementById('rejectSection');
-    const itemInfo = document.getElementById('itemInfo');
-    const submitBtn = document.getElementById('submitReviewBtn');
-    const adjustedAmountInput = document.getElementById('adjustedSavingAmount');
-    const adjustmentReasonInput = document.getElementById('adjustmentReason');
-    const reviewCommentInput = document.getElementById('reviewComment');
-    const rejectionReasonInput = document.getElementById('rejectionReason');
-
-    // 重置表单
-    if (adjustedAmountInput) adjustedAmountInput.value = '';
-    if (adjustmentReasonInput) adjustmentReasonInput.value = '';
-    if (reviewCommentInput) reviewCommentInput.value = '';
-    if (rejectionReasonInput) rejectionReasonInput.value = '';
-
-    // 设置表单action
-    form.action = '{% url "settlement_pages:settlement_item_review" 0 %}'.replace('0', itemId);
-    actionInput.value = action;
-
-    // 获取当前行的数据
-    const row = document.getElementById('item-row-' + itemId);
-    let originalAmountValue = 0;
-    if (row) {
-        const cells = row.querySelectorAll('td');
-        const opinionNumber = cells[0].textContent.trim();
-        const opinionTitle = cells[1].textContent.trim();
-        const originalAmountText = cells[4].textContent.trim();
-        originalAmountValue = parseFloat(originalAmountText.replace(/[^\d.-]/g, '')) || 0;
-
-        itemInfo.innerHTML = `
-            <div class="alert alert-info">
-                <strong>意见编号：</strong>${opinionNumber}<br>
-                <strong>意见标题：</strong>${opinionTitle}<br>
-                <strong>原始节省金额：</strong>${originalAmountText}
-            </div>
-        `;
-    }
-
-    // 根据操作类型显示不同的表单
-    if (action === 'approve') {
-        approveSection.style.display = 'block';
-        rejectSection.style.display = 'none';
-        submitBtn.className = 'btn btn-success';
-        submitBtn.textContent = '确认通过';
-        document.getElementById('reviewItemModalLabel').textContent = '确认结算明细项';
-
-        // 填充原始金额到调整金额输入框的占位符
-        if (adjustedAmountInput && originalAmountValue > 0) {
-            adjustedAmountInput.placeholder = originalAmountValue.toFixed(2);
-        }
-    } else if (action === 'reject') {
-        approveSection.style.display = 'none';
-        rejectSection.style.display = 'block';
-        submitBtn.className = 'btn btn-danger';
-        submitBtn.textContent = '确认驳回';
-        document.getElementById('reviewItemModalLabel').textContent = '驳回结算明细项';
-    }
-
-    modal.show();
-}
-
-// 表单提交后刷新页面
-document.getElementById('reviewItemForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const form = this;
-    const formData = new FormData(form);
-    const submitBtn = document.getElementById('submitReviewBtn');
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = '提交中...';
-
-    fetch(form.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert(data.message || '操作失败，请重试');
-            submitBtn.disabled = false;
-            submitBtn.textContent = submitBtn.className.includes('danger') ? '确认驳回' : '确认通过';
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('操作失败，请重试');
-        submitBtn.disabled = false;
-        submitBtn.textContent = submitBtn.className.includes('danger') ? '确认驳回' : '确认通过';
-    });
-});
-</script>
+<script type="application/json" id="projectSettlementDetailConfig">{"reviewItemUrlTemplate": "{% url 'settlement_pages:settlement_item_review' 999999 %}"}</script>
+<script src="{% static 'js/settlement/project_settlement_detail.js' %}"></script>
 {% endblock %}

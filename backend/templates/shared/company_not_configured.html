@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公司配置缺失</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 600px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #e74c3c;
+            margin-top: 0;
+            font-size: 28px;
+        }
+        .icon {
+            font-size: 64px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .message {
+            color: #555;
+            line-height: 1.6;
+            margin: 20px 0;
+        }
+        .user-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .user-info strong {
+            color: #333;
+        }
+        .actions {
+            margin-top: 30px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-right: 10px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #5568d3;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">⚠️</div>
+        <h1>公司配置缺失</h1>
+        <div class="message">
+            <p>您的账户尚未配置所属公司，无法访问业务模块。</p>
+            <p>这是多公司数据隔离的安全要求，请联系系统管理员为您配置所属公司。</p>
+        </div>
+        <div class="user-info">
+            <p><strong>用户名：</strong>{{ user.username }}</p>
+            <p><strong>姓名：</strong>{{ user.get_full_name|default:"未设置" }}</p>
+            <p><strong>尝试访问：</strong>{{ requested_path }}</p>
+        </div>
+        <div class="actions">
+            <a href="/admin/system_management/user/{{ user.id }}/change/" class="btn">前往用户管理配置</a>
+            <a href="/dashboard/" class="btn btn-secondary">返回首页</a>
+        </div>
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 14px;">
+            <p><strong>管理员操作步骤：</strong></p>
+            <ol style="margin: 10px 0; padding-left: 20px;">
+                <li>进入 <a href="/admin/system_management/user/{{ user.id }}/change/">用户管理</a></li>
+                <li>找到该用户，在"所属公司"字段选择对应的公司</li>
+                <li>保存后，用户即可正常访问业务模块</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

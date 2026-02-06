@@ -115,11 +115,14 @@
       word-break: break-word;
       white-space: normal;
     }
+    /* P3 S1 治理：原 style=" 外移 */
+    .sgdc-content-wrap { padding: 24px; }
+    .sgdc-empty-icon { font-size: 3rem; color: #dee2e6; }
   </style>
 {% endblock %}
 
 {% block pm_content %}
-<div style="padding: 24px;">
+<div class="sgdc-content-wrap">
   <div class="parent-goal-selector">
     <h5 class="mb-4">
       <i class="bi bi-diagram-3"></i> 选择父目标
@@ -132,7 +135,7 @@
       <div class="row g-3">
         {% for goal in available_parent_goals %}
         <div class="col-md-4 col-lg-3">
-          <div class="goal-card" data-goal-id="{{ goal.id }}" onclick="selectGoal({{ goal.id }})">
+          <div class="goal-card" data-action="strategic-goal-decompose-select" data-goal-id="{{ goal.id }}">
             <div class="goal-card-header">
               <div>
                 <h6 class="goal-card-title">{{ goal.name }}</h6>
@@ -180,7 +183,7 @@
     {% else %}
     <div class="text-center py-5">
       <div class="mb-3">
-        <i class="bi bi-inbox" style="font-size: 3rem; color: #dee2e6;"></i>
+        <i class="bi bi-inbox sgdc-empty-icon"></i>
       </div>
       <p class="text-muted">暂无可用的父目标</p>
       <a href="{% url 'plan_pages:strategic_goal_create' %}" class="btn btn-primary">
@@ -191,29 +194,6 @@
   </div>
 </div>
 
-<script>
-let selectedGoalId = null;
-
-function selectGoal(goalId) {
-  // 移除所有选中状态
-  document.querySelectorAll('.goal-card').forEach(card => {
-    card.classList.remove('selected');
-  });
-  
-  // 添加选中状态
-  const selectedCard = document.querySelector(`[data-goal-id="${goalId}"]`);
-  if (selectedCard) {
-    selectedCard.classList.add('selected');
-    selectedGoalId = goalId;
-    document.getElementById('parentGoalId').value = goalId;
-    document.getElementById('createBtn').disabled = false;
-  }
-}
-
-// 如果URL中有parent_goal_id参数，自动选中
-{% if parent_goal %}
-selectedGoalId = {{ parent_goal.id }};
-selectGoal(selectedGoalId);
-{% endif %}
-</script>
+<script type="application/json" id="strategicGoalDecomposeCreateConfig">{"initialParentGoalId": {% if parent_goal %}{{ parent_goal.id }}{% else %}null{% endif %}}</script>
+<script src="{% static 'js/plan/strategic-goal-decompose-create.js' %}"></script>
 {% endblock %}

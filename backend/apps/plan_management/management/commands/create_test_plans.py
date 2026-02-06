@@ -30,12 +30,11 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('用户 13880399996 不存在'))
             return
 
-        # 获取用户的公司信息
+        # P0-2: 获取用户的公司信息（改为使用 user.company）
         try:
-            profile = user.profile
-            company = profile.company
-            org_dept = profile.department
-            self.stdout.write(f'公司: {company.name if company else "未设置"}')
+            company = user.company
+            org_dept = user.department
+            self.stdout.write(f'公司: {company.company_name if company else "未设置"}')
             self.stdout.write(f'部门: {org_dept.name if org_dept else "未设置"}')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'获取用户信息失败: {e}'))

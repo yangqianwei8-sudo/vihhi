@@ -39,6 +39,7 @@ from .models import (
     ProjectFlowLog,
     ProjectDesignReply,
     ProjectMeetingRecord,
+    Goal,
 )
 from backend.apps.base_data.models import ServiceType, ServiceProfession, BusinessType
 from .serializers import ProjectSerializer, ProjectCreateSerializer
@@ -46,9 +47,6 @@ from .serializers import ProjectSerializer, ProjectCreateSerializer
 from backend.apps.system_management.models import User, Department
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.core.views import _build_full_top_nav
-# calculate_output_value 改为延迟导入，避免在数据库表不存在时导致模块加载失败
-
-
 logger = logging.getLogger(__name__)
 ROLE_LABELS = dict(ProjectTeam.ROLE_CHOICES)
 UNIT_LABELS = dict(ProjectTeam.UNIT_CHOICES)
@@ -933,33 +931,7 @@ def _complete_project_task(project, task_type, actor=None, status='completed'):
                 task.completed_by = actor
             task.save(update_fields=['status', 'completed_time', 'completed_by', 'updated_time'])
             _handle_task_followups(task, actor)
-            
-            # 触发产值计算（如果任务类型有对应的产值事件）
-            event_code = TASK_TYPE_TO_OUTPUT_VALUE_EVENT.get(task_type)
-            if event_code and project.contract_amount and project.contract_amount > 0:
-                try:
-                    from django.db import connection
-                    # 检查产值记录表是否存在
-                    with connection.cursor() as cursor:
-                        cursor.execute("""
-                            SELECT EXISTS (
-                                SELECT FROM information_schema.tables 
-                                WHERE table_schema = 'public' 
-                                AND table_name = 'settlement_output_value_record'
-                            );
-                        """)
-                        table_exists = cursor.fetchone()[0]
-                    
-                    if table_exists:
-                        responsible_user = task.assigned_to or actor or project.project_manager
-                        if responsible_user:
-                            calculate_output_value(project, event_code, responsible_user=responsible_user)
-                            logger.info('已为项目 %s 任务 %s 计算产值，事件：%s，责任人：%s', 
-                                      project.project_number, task_type, event_code, responsible_user.username)
-                except Exception as output_exc:
-                    logger.warning('计算产值失败（可能是模块未初始化）: project=%s, task_type=%s, event_code=%s, error=%s', 
-                                 project.project_number, task_type, event_code, str(output_exc))
-                    # 产值计算失败不影响任务完成流程
+            # 产值计算已收敛至 V1 API（GET /api/output/v1/opportunity/<id>/），此处不再调用旧服务
 
 
 def _user_matches_role(user, project, role):
@@ -1822,10 +1794,7 @@ def project_create(request):
                             """)
                             table_exists = cursor.fetchone()[0]
                         
-                        if table_exists:
-                            from backend.apps.output_value_management.services import calculate_output_value
-                            calculate_output_value(project, 'create_project', responsible_user=request.user)
-                            logger.info('已为项目 %s 计算"创建新项目"产值，创建人：%s', project.project_number, request.user.username)
+                        # 产值计算已收敛至 V1 API，此处不再调用旧服务
                     except Exception as output_exc:
                         logger.warning('计算"创建新项目"产值失败（可能是模块未初始化）: %s', str(output_exc))
                         # 产值计算失败不影响项目创建流程
@@ -2315,12 +2284,7 @@ def project_team(request, project_id):
                             """)
                             table_exists = cursor.fetchone()[0]
                         
-                        if table_exists:
-                            from backend.apps.output_value_management.services import calculate_output_value
-                            # 配置团队的责任人是项目经理
-                            responsible_user = project.project_manager or request.user
-                            calculate_output_value(project, 'configure_team', responsible_user=responsible_user)
-                            logger.info('已为项目 %s 计算"配置项目团队"产值，责任人：%s', project.project_number, responsible_user.username)
+                        # 产值计算已收敛至 V1 API，此处不再调用旧服务
                     except Exception as output_exc:
                         logger.warning('计算"配置项目团队"产值失败（可能是模块未初始化）: %s', str(output_exc))
                         # 产值计算失败不影响团队配置流程
@@ -4861,4 +4825,140 @@ def production_management(request):
     }, permission_set, 'production_management', request.user)
     
     return render(request, 'production_management/production_management.html', context)
+
+
+# ========== 目标管理（精简版） ==========
+
+@login_required
+def goal_list(request):
+    """目标列表（只显示自己创建或owner的目标）"""
+    from django.core.paginator import Paginator
+    
+    # 权限控制：只能看到自己创建或owner的目标
+    goals = Goal.objects.filter(
+        Q(owner=request.user) | Q(created_by=request.user)
+    ).select_related('owner', 'created_by').order_by('-created_at')
+    
+    # 筛选
+    status_filter = request.GET.get('status', '').strip()
+    if status_filter in ['not_started', 'in_progress', 'completed', 'terminated']:
+        goals = goals.filter(status=status_filter)
+    
+    search = request.GET.get('search', '').strip()
+    if search:
+        goals = goals.filter(title__icontains=search)
+    
+    # 分页
+    paginator = Paginator(goals, 13)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    permission_set = get_user_permission_codes(request.user)
+    context = _with_nav({
+        'goals': page_obj,
+        'status_filter': status_filter,
+        'search': search,
+    }, permission_set, 'goal_list', request.user, request=request)
+    
+    return render(request, 'production_management/goal_list.html', context)
+
+
+@login_required
+def goal_detail(request, goal_id):
+    """目标详情"""
+    goal = get_object_or_404(Goal.objects.select_related('owner', 'created_by'), id=goal_id)
+    
+    # 权限控制：只能查看自己创建或owner的目标
+    if goal.owner != request.user and goal.created_by != request.user:
+        messages.error(request, '您无权查看此目标。')
+        return redirect('production_pages:goal_list')
+    
+    permission_set = get_user_permission_codes(request.user)
+    context = _with_nav({
+        'goal': goal,
+    }, permission_set, 'goal_detail', request.user, request=request)
+    
+    return render(request, 'production_management/goal_detail.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def goal_create(request):
+    """创建目标"""
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        owner_id = request.POST.get('owner', '').strip()
+        status = request.POST.get('status', 'not_started').strip()
+        start_date = request.POST.get('start_date', '').strip() or None
+        end_date = request.POST.get('end_date', '').strip() or None
+        
+        if not title:
+            messages.error(request, '目标名称不能为空。')
+            return redirect('production_pages:goal_create')
+        
+        try:
+            owner = User.objects.get(id=owner_id) if owner_id else request.user
+        except User.DoesNotExist:
+            messages.error(request, '归属人不存在。')
+            return redirect('production_pages:goal_create')
+        
+        goal = Goal.objects.create(
+            title=title,
+            owner=owner,
+            status=status,
+            start_date=start_date,
+            end_date=end_date,
+            created_by=request.user,
+        )
+        
+        messages.success(request, '目标创建成功。')
+        return redirect('production_pages:goal_detail', goal_id=goal.id)
+    
+    permission_set = get_user_permission_codes(request.user)
+    context = _with_nav({
+        'users': User.objects.filter(is_active=True).order_by('username'),
+    }, permission_set, 'goal_create', request.user, request=request)
+    
+    return render(request, 'production_management/goal_form.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def goal_edit(request, goal_id):
+    """编辑目标"""
+    goal = get_object_or_404(Goal, id=goal_id)
+    
+    # 权限控制：只能编辑自己创建或owner的目标
+    if goal.owner != request.user and goal.created_by != request.user:
+        messages.error(request, '您无权编辑此目标。')
+        return redirect('production_pages:goal_list')
+    
+    if request.method == 'POST':
+        goal.title = request.POST.get('title', '').strip()
+        owner_id = request.POST.get('owner', '').strip()
+        goal.status = request.POST.get('status', 'not_started').strip()
+        goal.start_date = request.POST.get('start_date', '').strip() or None
+        goal.end_date = request.POST.get('end_date', '').strip() or None
+        
+        if not goal.title:
+            messages.error(request, '目标名称不能为空。')
+            return redirect('production_pages:goal_edit', goal_id=goal.id)
+        
+        try:
+            goal.owner = User.objects.get(id=owner_id) if owner_id else request.user
+        except User.DoesNotExist:
+            messages.error(request, '归属人不存在。')
+            return redirect('production_pages:goal_edit', goal_id=goal.id)
+        
+        goal.save()
+        messages.success(request, '目标更新成功。')
+        return redirect('production_pages:goal_detail', goal_id=goal.id)
+    
+    permission_set = get_user_permission_codes(request.user)
+    context = _with_nav({
+        'goal': goal,
+        'users': User.objects.filter(is_active=True).order_by('username'),
+    }, permission_set, 'goal_edit', request.user, request=request)
+    
+    return render(request, 'production_management/goal_form.html', context)
 

@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.postgres.fields import ArrayField
+from django.db.models import Max
 from backend.apps.system_management.models import User
 
 
@@ -88,13 +89,12 @@ class ApprovalNode(models.Model):
     ]
     
     APPROVER_TYPE_CHOICES = [
-        ('user', '指定用户'),
         ('role', '指定角色'),
         ('department', '指定部门'),
         ('department_manager', '部门经理'),
         ('creator', '创建人'),
-        ('creator_manager', '创建人上级'),
-        ('custom', '自定义规则'),
+        ('creator_manager', '创建人直属上级'),
+        ('creator_manager_chain', '创建人多级上级'),
     ]
     
     APPROVAL_MODE_CHOICES = [
@@ -114,6 +114,7 @@ class ApprovalNode(models.Model):
     approver_users = models.ManyToManyField(User, blank=True, related_name='approval_nodes', verbose_name='指定审批人')
     approver_roles = models.ManyToManyField('system_management.Role', blank=True, related_name='approval_nodes', verbose_name='指定角色')
     approver_departments = models.ManyToManyField('system_management.Department', blank=True, related_name='approval_nodes', verbose_name='指定部门')
+    approver_config = models.JSONField(default=dict, blank=True, verbose_name='审批人规则配置', help_text='JSON格式的审批人规则配置参数，例如：{"levels": 2} 用于多级上级审批')
     approval_mode = models.CharField(max_length=20, choices=APPROVAL_MODE_CHOICES, default='single', verbose_name='审批模式')
     
     # 条件配置（用于条件节点）
@@ -134,6 +135,52 @@ class ApprovalNode(models.Model):
         verbose_name_plural = verbose_name
         ordering = ['workflow', 'sequence']
         unique_together = [['workflow', 'sequence']]
+    
+    def clean(self):
+        """模型校验：禁止使用已废弃的审批人类型，并校验 approver_config"""
+        from django.core.exceptions import ValidationError
+        
+        # 禁止使用 user 类型（写死用户，无法适应组织变化）
+        if self.approver_type == 'user':
+            raise ValidationError({
+                'approver_type': '审批人类型 "指定用户" 已废弃，禁止使用。请使用 "指定角色" 或其他配置化类型，以支持组织变化自动适配。'
+            })
+        
+        # 禁止使用 custom 类型（硬编码逻辑，无法配置）
+        if self.approver_type == 'custom':
+            raise ValidationError({
+                'approver_type': '审批人类型 "自定义规则" 已废弃，禁止使用。请使用 "指定角色" 或其他配置化类型。'
+            })
+        
+        # 校验 approver_config（针对 creator_manager_chain）
+        if self.approver_type == 'creator_manager_chain':
+            if not isinstance(self.approver_config, dict):
+                raise ValidationError({
+                    'approver_config': 'creator_manager_chain 类型必须配置 approver_config（JSON格式）'
+                })
+            
+            levels = self.approver_config.get('levels')
+            if levels is None:
+                raise ValidationError({
+                    'approver_config': 'creator_manager_chain 类型必须配置 levels 参数（向上追溯的级数）'
+                })
+            
+            if not isinstance(levels, int) or levels < 1:
+                raise ValidationError({
+                    'approver_config': 'levels 必须为正整数（1-10），当前值：{}'.format(levels)
+                })
+            
+            if levels > 10:
+                raise ValidationError({
+                    'approver_config': 'levels 不能超过 10 级，当前值：{}。建议值：2-4 级'.format(levels)
+                })
+        
+        super().clean()
+    
+    def save(self, *args, **kwargs):
+        """保存时强制校验，防止绕过clean"""
+        self.full_clean()
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.workflow.name} - {self.name}"
@@ -229,4 +276,166 @@ class ApprovalRecord(models.Model):
     
     def __str__(self):
         return f"{self.instance.instance_number} - {self.approver.username} - {self.get_result_display()}"
+
+
+class WorkflowBinding(models.Model):
+    """流程模板绑定配置
+    
+    用于配置业务对象类型 + 操作类型 → 流程模板的绑定关系
+    支持同一业务对象的不同操作（如 plan 的 start/cancel）使用不同的流程模板
+    """
+    # 用于模板选择的操作类型（仅这些操作会参与流程模板绑定）
+    ACTION_CHOICES_FOR_BINDING = [
+        ('submit', '提交审批'),
+        ('start', '启动'),
+        ('cancel', '取消'),
+    ]
+    
+    # 完整的操作类型列表（包含不用于模板选择的操作，用于向后兼容）
+    ACTION_CHOICES = ACTION_CHOICES_FOR_BINDING + [
+        ('approve', '审批'),  # 不用于模板选择
+        ('reject', '驳回'),   # 不用于模板选择
+        ('withdraw', '撤回'), # 不用于模板选择
+    ]
+    
+    # 绑定目标：业务对象类型
+    content_type = models.ForeignKey(
+        'contenttypes.ContentType',
+        on_delete=models.CASCADE,
+        verbose_name='业务对象类型',
+        help_text='选择要绑定的业务对象类型，例如：loanapplication（借款申请）、sealusage（用印申请）等'
+    )
+    
+    # 操作类型
+    action = models.CharField(
+        max_length=50,
+        choices=ACTION_CHOICES,
+        default='submit',
+        verbose_name='操作类型',
+        help_text='选择操作类型，例如：submit（提交审批）、start（启动）、cancel（取消）等'
+    )
+    
+    # 绑定的流程模板
+    workflow_template = models.ForeignKey(
+        WorkflowTemplate,
+        on_delete=models.PROTECT,
+        related_name='bindings',
+        verbose_name='流程模板',
+        help_text='选择要绑定的流程模板'
+    )
+    
+    # 优先级（数字越大优先级越高，用于同一 content_type + action 有多条配置时）
+    priority = models.IntegerField(
+        default=0,
+        verbose_name='优先级',
+        help_text='数字越大优先级越高。当同一业务对象类型和操作类型有多条配置时，选择优先级最高的启用配置'
+    )
+    
+    # 是否启用
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        verbose_name='是否启用',
+        help_text='只有启用的配置才会生效'
+    )
+    
+    # 备注
+    note = models.TextField(
+        blank=True,
+        verbose_name='备注',
+        help_text='配置说明或备注信息'
+    )
+    
+    # 审计字段
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='created_workflow_bindings',
+        verbose_name='创建人'
+    )
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='updated_workflow_bindings',
+        verbose_name='更新人'
+    )
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'workflow_binding'
+        verbose_name = '流程模板绑定配置'
+        verbose_name_plural = verbose_name
+        ordering = ['-priority', '-created_time']
+        indexes = [
+            models.Index(fields=['content_type', 'action', 'is_active']),
+            models.Index(fields=['is_active']),
+        ]
+        # 唯一约束：同一 content_type + action + is_active=True 时，priority 应该唯一（通过业务逻辑保证）
+    
+    def __str__(self):
+        content_type_name = self.content_type.model if self.content_type else 'Unknown'
+        action_display = self.get_action_display()
+        workflow_name = self.workflow_template.name if self.workflow_template else 'Unknown'
+        return f"{content_type_name} - {action_display} → {workflow_name}"
+    
+    def clean(self):
+        """模型级别的验证"""
+        from django.core.exceptions import ValidationError
+        
+        # 验证操作类型：只允许用于模板选择的操作类型
+        if self.action not in [choice[0] for choice in self.ACTION_CHOICES_FOR_BINDING]:
+            raise ValidationError({
+                'action': f'操作类型 "{self.get_action_display()}" 不用于流程模板选择，请选择 submit/start/cancel 之一'
+            })
+        
+        # 验证流程模板状态
+        if self.workflow_template and self.workflow_template.status != 'active':
+            raise ValidationError({
+                'workflow_template': '只能绑定状态为"启用"的流程模板'
+            })
+        
+        # 注意：唯一生效规则的实际保证在 save() 方法中通过自动禁用其他配置实现
+        # 这里不再进行严格的优先级检查，因为 save() 会自动处理
+    
+    def save(self, *args, **kwargs):
+        """
+        保存前执行验证，并确保唯一启用规则（事务一致）
+        
+        策略：当启用一条配置时，自动禁用同 content_type + action 的其他启用配置
+        这样可以确保数据库级一致性，避免并发问题
+        """
+        from django.db import transaction
+        
+        self.full_clean()
+        
+        # 如果当前配置要启用，且存在同 content_type + action 的其他启用配置
+        # 则自动禁用它们（确保唯一启用规则）
+        if self.is_active and self.content_type and self.action:
+            with transaction.atomic():
+                # 先保存当前对象（如果已存在pk）
+                if self.pk:
+                    super().save(*args, **kwargs)
+                
+                # 禁用同 content_type + action 的其他启用配置
+                conflicting = WorkflowBinding.objects.filter(
+                    content_type=self.content_type,
+                    action=self.action,
+                    is_active=True
+                ).exclude(pk=self.pk if self.pk else None)
+                
+                if conflicting.exists():
+                    # 禁用其他启用配置（确保唯一启用规则）
+                    # 注意：这里不检查优先级，因为启用当前配置时，其他配置应该被禁用
+                    # 如果用户想要保留其他配置，应该先停用当前配置，再启用其他配置
+                    conflicting.update(is_active=False)
+                
+                # 如果当前对象是新创建的，现在保存
+                if not self.pk:
+                    super().save(*args, **kwargs)
+        else:
+            # 如果当前配置不启用，直接保存
+            super().save(*args, **kwargs)
 

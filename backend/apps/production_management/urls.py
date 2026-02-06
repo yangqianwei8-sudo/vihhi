@@ -54,4 +54,9 @@ urlpatterns = [
     path('<int:project_id>/archive/', views_pages.project_archive, name='project_archive'),
     path('monitor/', views_pages.project_monitor, name='project_monitor'),
     
+    # 目标管理（精简版）
+    path('goals/', views_pages.goal_list, name='goal_list'),
+    path('goals/create/', views_pages.goal_create, name='goal_create'),
+    path('goals/<int:goal_id>/', views_pages.goal_detail, name='goal_detail'),
+    path('goals/<int:goal_id>/edit/', views_pages.goal_edit, name='goal_edit'),
 ]

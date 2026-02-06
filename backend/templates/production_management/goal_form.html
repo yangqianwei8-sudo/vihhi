@@ -1,0 +1,62 @@
+{% extends "shared/two_column_layout_base.html" %}
+{% load static %}
+
+{% block pm_title %}{% if goal %}编辑目标{% else %}新建目标{% endif %}{% endblock pm_title %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'production_pages:goal_list' %}">目标列表</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if goal %}编辑目标{% else %}新建目标{% endif %}</li>
+{% endblock breadcrumb_items %}
+
+{% block pm_content %}
+<form-section>
+  <form method="post">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+      <label for="title" class="form-label">目标名称 <span class="text-danger">*</span></label>
+      <input type="text" class="form-control" id="title" name="title" 
+             value="{{ goal.title|default:'' }}" required maxlength="200">
+    </div>
+    
+    <div class="mb-3">
+      <label for="owner" class="form-label">归属人 <span class="text-danger">*</span></label>
+      <select class="form-select" id="owner" name="owner" required>
+        {% for user in users %}
+        <option value="{{ user.id }}" {% if goal and goal.owner.id == user.id %}selected{% elif not goal and user.id == request.user.id %}selected{% endif %}>
+          {{ user.get_full_name|default:user.username }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div class="mb-3">
+      <label for="status" class="form-label">状态</label>
+      <select class="form-select" id="status" name="status">
+        <option value="not_started" {% if goal and goal.status == 'not_started' %}selected{% elif not goal %}selected{% endif %}>未开始</option>
+        <option value="in_progress" {% if goal and goal.status == 'in_progress' %}selected{% endif %}>进行中</option>
+        <option value="completed" {% if goal and goal.status == 'completed' %}selected{% endif %}>已完成</option>
+        <option value="terminated" {% if goal and goal.status == 'terminated' %}selected{% endif %}>已终止</option>
+      </select>
+    </div>
+    
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label for="start_date" class="form-label">开始日期</label>
+        <input type="date" class="form-control" id="start_date" name="start_date" 
+               value="{% if goal and goal.start_date %}{{ goal.start_date|date:'Y-m-d' }}{% endif %}">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label for="end_date" class="form-label">结束日期</label>
+        <input type="date" class="form-control" id="end_date" name="end_date" 
+               value="{% if goal and goal.end_date %}{{ goal.end_date|date:'Y-m-d' }}{% endif %}">
+      </div>
+    </div>
+    
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">保存</button>
+      <a href="{% if goal %}{% url 'production_pages:goal_detail' goal.id %}{% else %}{% url 'production_pages:goal_list' %}{% endif %}" class="btn btn-outline-secondary">取消</a>
+    </div>
+  </form>
+</form-section>
+{% endblock pm_content %}

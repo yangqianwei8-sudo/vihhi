@@ -1,4 +1,5 @@
 {% extends "shared/two_column_layout_base.html" %}
+{% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
@@ -8,6 +9,7 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/financial/balance-sheet-report.css' %}">
 <style>
     .content-card {
         background: #fff;
@@ -67,26 +69,19 @@
                     <button type="submit" class="btn btn-primary me-2">
                         <i class="bi bi-search"></i> 查询
                     </button>
-                    <button type="button" class="btn btn-success" onclick="generateReport()">
+                    <button type="button" class="btn btn-success" data-action="balance-sheet-generate">
                         <i class="bi bi-file-earmark-spreadsheet"></i> 生成报表
                     </button>
                 </div>
             </div>
         </form>
 
-        <form method="post" id="generateForm" style="display: none;">
+        <form method="post" id="generateForm" class="d-none">
             {% csrf_token %}
             <input type="hidden" name="period_year" id="hidden_period_year" value="{{ period_year }}">
             <input type="hidden" name="period_month" id="hidden_period_month" value="{{ period_month|default:'' }}">
         </form>
-
-        <script>
-        function generateReport() {
-            document.getElementById('hidden_period_year').value = document.querySelector('[name="period_year"]').value;
-            document.getElementById('hidden_period_month').value = document.querySelector('[name="period_month"]').value;
-            document.getElementById('generateForm').submit();
-        }
-        </script>
+        <script src="{% static 'js/financial/balance-sheet-report.js' %}"></script>
 
         <div class="text-center mb-4">
             <h3>资产负债表</h3>
@@ -97,16 +92,16 @@
             <table class="balance-sheet-table">
                 <thead>
                     <tr>
-                        <th style="width: 40%;">资产</th>
-                        <th style="width: 20%;" class="amount-cell">金额</th>
-                        <th style="width: 40%;">负债和所有者权益</th>
-                        <th style="width: 20%;" class="amount-cell">金额</th>
+                        <th class="bsr-th-w-40">资产</th>
+                        <th class="bsr-th-w-20 amount-cell">金额</th>
+                        <th class="bsr-th-w-40">负债和所有者权益</th>
+                        <th class="bsr-th-w-20 amount-cell">金额</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="2" style="font-weight: 600;">资产</td>
-                        <td colspan="2" style="font-weight: 600;">负债和所有者权益</td>
+                        <td colspan="2" class="bsr-section-label">资产</td>
+                        <td colspan="2" class="bsr-section-label">负债和所有者权益</td>
                     </tr>
                     {% for code, item in report_data.assets.items %}
                     <tr>
@@ -129,7 +124,7 @@
                     </tr>
                     <tr>
                         <td colspan="2"></td>
-                        <td colspan="2" style="font-weight: 600;">负债</td>
+                        <td colspan="2" class="bsr-section-label">负债</td>
                     </tr>
                     {% for code, item in report_data.liabilities.items %}
                     <tr>
@@ -152,7 +147,7 @@
                     </tr>
                     <tr>
                         <td colspan="2"></td>
-                        <td colspan="2" style="font-weight: 600;">所有者权益</td>
+                        <td colspan="2" class="bsr-section-label">所有者权益</td>
                     </tr>
                     {% for code, item in report_data.equity.items %}
                     <tr>

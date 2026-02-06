@@ -3,6 +3,7 @@
 {% load static %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/opportunity/win-loss-list.css' %}">
 {% endblock %}
 
 {% block pm_title %}输赢记录{% endblock %}
@@ -114,16 +115,16 @@
                 <table class="list-page-table">
             <thead>
                 <tr>
-                            <th style="width: 200px;">商机名称</th>
-                            <th style="width: 120px;">商机编号</th>
-                            <th style="width: 150px;">关联客户</th>
-                            <th style="width: 100px;">负责商务</th>
-                            <th style="width: 100px; text-align: center;">状态</th>
-                            <th style="width: 120px; text-align: right;">{% if status == 'won' %}实际金额{% else %}预计金额{% endif %}（万元）</th>
-                            <th style="width: 120px;">合同编号</th>
-                            <th style="width: 150px; text-align: center;">更新时间</th>
-                            <th style="width: 200px;">{% if status == 'won' %}赢单原因{% else %}输单原因{% endif %}</th>
-                            <th style="width: 100px; text-align: center;">操作</th>
+                            <th class="owl-th-200">商机名称</th>
+                            <th class="owl-th-120">商机编号</th>
+                            <th class="owl-th-150">关联客户</th>
+                            <th class="owl-th-100">负责商务</th>
+                            <th class="owl-th-center">状态</th>
+                            <th class="owl-th-right">{% if status == 'won' %}实际金额{% else %}预计金额{% endif %}（万元）</th>
+                            <th class="owl-th-120">合同编号</th>
+                            <th class="owl-th-150-center">更新时间</th>
+                            <th class="owl-th-200-cause">{% if status == 'won' %}赢单原因{% else %}输单原因{% endif %}</th>
+                            <th class="owl-th-100-op">操作</th>
                 </tr>
             </thead>
             <tbody>
@@ -141,14 +142,14 @@
                                 </a>
                             </td>
                             <td>{{ opportunity.business_manager.get_full_name|default:opportunity.business_manager.username }}</td>
-                            <td style="text-align: center;">
+                            <td class="owl-td-center">
                                 {% if opportunity.status == 'won' %}
                                 <span class="badge bg-success">赢单</span>
                                 {% else %}
                                 <span class="badge bg-danger">输单</span>
                                 {% endif %}
                             </td>
-                            <td style="text-align: right;" class="info-value-numeric">
+                            <td class="owl-td-right info-value-numeric">
                                 {% if opportunity.status == 'won' %}
                                     {{ opportunity.actual_amount|floatformat:2|default:'未填写' }}
                                 {% else %}
@@ -162,7 +163,7 @@
                                     -
                                 {% endif %}
                             </td>
-                            <td style="text-align: center;">{{ opportunity.updated_time|date:'Y-m-d H:i' }}</td>
+                            <td class="owl-td-center">{{ opportunity.updated_time|date:'Y-m-d H:i' }}</td>
                             <td>
                                 {% if opportunity.status == 'won' %}
                                     {{ opportunity.win_reason|truncatewords:10|default:'未填写' }}
@@ -170,7 +171,7 @@
                                     {{ opportunity.loss_reason|truncatewords:10|default:'未填写' }}
                                 {% endif %}
                             </td>
-                            <td style="text-align: center;">
+                            <td class="owl-td-center">
                                 <div class="btn-group" role="group">
                                     <a href="{% url 'opportunity_pages:opportunity_detail' opportunity.id %}" class="btn btn-sm btn-outline-primary" title="查看详情">
                                         <i class="bi bi-eye"></i>
@@ -180,7 +181,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="10" style="text-align: center; padding: 40px;">
+                            <td colspan="10" class="owl-empty-cell">
                                 <p class="text-muted">暂无赢单与输单数据</p>
                     </td>
                 </tr>

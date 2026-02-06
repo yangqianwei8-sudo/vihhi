@@ -3,6 +3,7 @@
 
 {% block module_styles %}
 {{ block.super }}
+<link rel="stylesheet" href="{% static 'css/contract/contract-home.css' %}">
 <style>
   .pm-home-wrap {
     padding: 0;
@@ -299,11 +300,6 @@
 
 {% block module_extra_js %}
 <script src="{% static 'js/lib/chart.umd.min.js' %}"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-
-});
-</script>
 {% endblock %}
 
 {% block module_home_custom_content %}
@@ -341,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="pm-card-title">
         风险预警
         {% if overdue_contracts_count or stale_contracts_count %}
-        <span style="font-size: 12px; color: #333333; margin-left: 8px;">
+        <span class="pm-card-title-meta">
           (逾期 {{ overdue_contracts_count|default:0 }} | 未更新 {{ stale_contracts_count|default:0 }})
         </span>
         {% endif %}
@@ -371,12 +367,12 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="pm-todo-card">
       <div class="pm-card-title">
         {% if todo_summary_url %}
-          <a href="{{ todo_summary_url }}" style="color: inherit; text-decoration: none;">待办事项</a>
+          <a href="{{ todo_summary_url }}" class="pm-card-title-link">待办事项</a>
         {% else %}
           待办事项
         {% endif %}
         {% if pending_approval_count or upcoming_deadline_count or stale_authorization_letters_count %}
-        <span style="font-size: 12px; color: #333333; margin-left: 8px;">
+        <span class="pm-card-title-meta">
           (待审批 {{ pending_approval_count|default:0 }} | 即将到期 {{ upcoming_deadline_count|default:0 }} | 需更新 {{ stale_authorization_letters_count|default:0 }})
         </span>
         {% endif %}
@@ -388,39 +384,39 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="pm-item-title">
             <a href="{{ item.url }}" class="pm-item-link">{{ item.title }}</a>
             {% if item.plan_number or item.goal_number %}
-            <span style="font-size: 11px; color: #999; margin-left: 8px;">
+            <span class="pm-todo-item-badge">
               ({% if item.plan_number %}{{ item.plan_number }}{% elif item.goal_number %}{{ item.goal_number }}{% endif %})
             </span>
             {% endif %}
           </div>
           <div class="pm-item-meta">
             {% if item.type == 'approval' %}
-            <div style="margin-bottom: 4px;">
+            <div class="pm-item-meta-line">
               <strong>{{ item.request_type }}</strong> |
               {% if item.plan_type %}{{ item.plan_type }} | {% endif %}
               申请人：{{ item.requested_by }} | {{ item.time|date:"Y-m-d H:i" }}
             </div>
-            <div style="font-size: 12px; color: #666;">
+            <div class="pm-item-meta-detail">
               负责人：{{ item.responsible }}{% if item.department %} | 部门：{{ item.department }}{% endif %}
               {% if item.related_goal %} | 关联目标：{{ item.related_goal }}{% endif %}
             </div>
             {% elif item.type == 'deadline' %}
-            <div style="margin-bottom: 4px;">
+            <div class="pm-item-meta-line">
               <strong>{{ item.deadline }} 到期</strong>（剩余 {{ item.days_left }} 天）
               {% if item.progress is not None %} | 进度：{{ item.progress }}%{% endif %}
             </div>
-            <div style="font-size: 12px; color: #666;">
+            <div class="pm-item-meta-detail">
               负责人：{{ item.responsible }}{% if item.department %} | 部门：{{ item.department }}{% endif %}
               {% if item.plan_type %} | {{ item.plan_type }}{% endif %}
               {% if item.related_goal %} | 关联目标：{{ item.related_goal }}{% endif %}
             </div>
             {% elif item.type == 'goal_update' %}
-            <div style="margin-bottom: 4px;">
+            <div class="pm-item-meta-line">
               <strong>{{ item.days }} 天未更新</strong>
               {% if item.status %} | 状态：{{ item.status }}{% endif %}
               {% if item.completion_rate is not None %} | 完成率：{{ item.completion_rate }}%{% endif %}
             </div>
-            <div style="font-size: 12px; color: #666;">
+            <div class="pm-item-meta-detail">
               负责人：{{ item.responsible }}{% if item.department %} | 部门：{{ item.department }}{% endif %}
               {% if item.goal_type %} | {{ item.goal_type }}{% endif %}
             </div>
@@ -440,7 +436,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="pm-my-work-card">
       <div class="pm-card-title">
         {% if my_work.summary_url %}
-          <a href="{{ my_work.summary_url }}" style="color: inherit; text-decoration: none;">我的工作</a>
+          <a href="{{ my_work.summary_url }}" class="pm-card-title-link">我的工作</a>
         {% else %}
           我的工作
         {% endif %}
@@ -462,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
           {% endfor %}
         </ul>
         {% else %}
-        <div class="pm-empty" style="padding: 20px;">暂无数据</div>
+        <div class="pm-empty pm-empty-compact">暂无数据</div>
         {% endif %}
       </div>
 
@@ -480,7 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
           {% endfor %}
         </ul>
         {% else %}
-        <div class="pm-empty" style="padding: 20px;">暂无数据</div>
+        <div class="pm-empty pm-empty-compact">暂无数据</div>
         {% endif %}
       </div>
 
@@ -498,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
           {% endfor %}
         </ul>
         {% else %}
-        <div class="pm-empty" style="padding: 20px;">暂无数据</div>
+        <div class="pm-empty pm-empty-compact">暂无数据</div>
         {% endif %}
       </div>
       {% else %}

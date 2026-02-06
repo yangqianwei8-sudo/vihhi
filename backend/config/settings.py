@@ -89,6 +89,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     # 'backend.config.middleware.AutoLoginMiddleware',  # 自动登录中间件 - 已禁用，恢复登录页面
+    'backend.config.middleware.CompanyIsolationGuardMiddleware',  # P0-2补充: 公司隔离安全门槛
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

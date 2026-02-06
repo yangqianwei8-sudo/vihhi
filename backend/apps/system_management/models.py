@@ -22,6 +22,24 @@ class User(AbstractUser):
         related_name='members',
         verbose_name='部门'
     )
+    manager = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='direct_reports',
+        verbose_name='直属上级',
+        help_text='用于审批流程中的"创建人上级"规则，组织变化时只需更新此字段，无需修改流程模板'
+    )
+    company = models.ForeignKey(
+        'OurCompany',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='users',
+        verbose_name='所属公司',
+        help_text='P0-2: 用户所属公司，用于多公司数据隔离'
+    )
     position = models.CharField(max_length=100, blank=True, verbose_name='职位')
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='internal', verbose_name='用户类型')
     client_type = models.CharField(max_length=50, blank=True, verbose_name='客户类型备注')
@@ -60,29 +78,50 @@ class User(AbstractUser):
 
 
 class Department(models.Model):
-    """部门架构"""
+    """部门架构（P0-3: 按公司隔离，code 同公司内唯一）"""
     name = models.CharField(max_length=100, verbose_name='部门名称')
-    code = models.CharField(max_length=50, unique=True, verbose_name='部门编码')
+    code = models.CharField(max_length=50, verbose_name='部门编码')  # 与 company 联合唯一，见 Meta.constraints
+    company = models.ForeignKey(
+        'OurCompany',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='departments',
+        verbose_name='所属公司',
+        help_text='P0-3: 部门所属公司，用于多公司数据隔离'
+    )
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, verbose_name='上级部门')
-    leader = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, 
-                              related_name='leading_departments', verbose_name='部门负责人')  # 添加了 related_name
+    leader = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='leading_departments', verbose_name='部门负责人')
     description = models.TextField(blank=True, verbose_name='部门描述')
     order = models.IntegerField(default=0, verbose_name='排序')
     is_active = models.BooleanField(default=True, verbose_name='是否启用')
     created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
-    
+
     class Meta:
         db_table = 'system_department'
         verbose_name = '部门'
         verbose_name_plural = verbose_name
+        constraints = [
+            models.UniqueConstraint(fields=['company', 'code'], name='system_dept_company_code_uniq'),
+        ]
     
     def __str__(self):
         return self.name
 
 class Role(models.Model):
-    """角色表"""
+    """角色表（P0-4: company 为空=全局角色，code 同公司内唯一）"""
     name = models.CharField(max_length=100, verbose_name='角色名称')
-    code = models.CharField(max_length=50, unique=True, verbose_name='角色编码')
+    code = models.CharField(max_length=50, verbose_name='角色编码')  # 与 company 联合唯一，见 Meta.constraints
+    company = models.ForeignKey(
+        'OurCompany',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='roles',
+        verbose_name='所属公司',
+        help_text='P0-4: 为空表示全局角色，非空表示公司专属角色'
+    )
     custom_permissions = models.ManyToManyField(
         'permission_management.PermissionItem',
         blank=True,
@@ -92,11 +131,14 @@ class Role(models.Model):
     description = models.TextField(blank=True, verbose_name='角色描述')
     is_active = models.BooleanField(default=True, verbose_name='是否启用')
     created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
-    
+
     class Meta:
         db_table = 'system_role'
         verbose_name = '角色'
         verbose_name_plural = verbose_name
+        constraints = [
+            models.UniqueConstraint(fields=['company', 'code'], name='system_role_company_code_uniq'),
+        ]
     
     def __str__(self):
         return self.name

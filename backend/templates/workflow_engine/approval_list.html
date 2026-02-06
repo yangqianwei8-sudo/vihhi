@@ -57,6 +57,23 @@
         display: flex;
         gap: 8px;
     }
+    /* P3 S1 治理：原 style=" 外移 */
+    .approval-list-batch-form-hidden { display: none; }
+    .approval-list-th-checkbox { width: 50px; }
+    .approval-list-th-instance { width: 12%; }
+    .approval-list-th-workflow { width: 15%; }
+    .approval-list-th-applicant { width: 10%; }
+    .approval-list-th-apply-time { width: 10%; }
+    .approval-list-th-status { width: 8%; }
+    .approval-list-th-node { width: 12%; }
+    .approval-list-th-content { width: 15%; }
+    .approval-list-th-actions { width: 18%; }
+    .approval-list-th-settings { width: auto; min-width: 32px; position: relative; text-align: center; }
+    .approval-list-btn-column-settings { text-decoration: none; color: #FFC107 !important; border: none; background: none; padding: 0; }
+    .approval-list-btn-column-settings i { color: #FFC107 !important; font-size: 1.1rem; }
+    .approval-list-empty-hint { font-size: 0.9rem; margin-top: 8px; }
+    .approval-list-modal-th-toggle { width: 60px; }
+    .approval-list-modal-th-order { width: 50px; }
   </style>
 {% endblock module_styles %}
 
@@ -156,7 +173,7 @@
   {# 批量操作工具栏 - 放在筛选器之后，表格之前 #}
   {% if not tab or tab == 'pending' %}
     {% if pending_count > 0 %}
-    <form id="batchApproveForm" method="post" action="{% url 'workflow_engine:approval_list_pending' %}" style="display: none;">
+    <form id="batchApproveForm" method="post" action="{% url 'workflow_engine:approval_list_pending' %}" class="approval-list-batch-form-hidden">
       {% csrf_token %}
       <input type="hidden" name="action" id="batchAction" value="">
       <div class="list-page-batch-actions">
@@ -185,30 +202,30 @@
             <tr>
               {% block list_table_checkbox_header %}
                 {% if not tab or tab == 'pending' %}
-                  <th style="width: 50px;">
+                  <th class="approval-list-th-checkbox">
                     <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
                   </th>
                 {% elif tab == 'my_submitted' %}
-                  <th style="width: 50px;">
+                  <th class="approval-list-th-checkbox">
                     <!-- 我提交的审批不需要复选框，但保留列宽以保持对齐 -->
                   </th>
                 {% endif %}
               {% endblock list_table_checkbox_header %}
               {% block list_table_headers %}
-                <th style="width: 12%;">审批编号</th>
-                <th style="width: 15%;">流程名称</th>
-                <th style="width: 10%;">申请人</th>
-                <th style="width: 10%;">申请时间</th>
-                <th style="width: 8%;">状态</th>
-                <th style="width: 12%;">当前节点</th>
-                <th style="width: 15%;">关联对象</th>
-                <th style="width: 18%;">操作</th>
+                <th class="approval-list-th-instance">审批编号</th>
+                <th class="approval-list-th-workflow">流程名称</th>
+                <th class="approval-list-th-applicant">申请人</th>
+                <th class="approval-list-th-apply-time">申请时间</th>
+                <th class="approval-list-th-status">状态</th>
+                <th class="approval-list-th-node">当前节点</th>
+                <th class="approval-list-th-content">关联对象</th>
+                <th class="approval-list-th-actions">操作</th>
               {% endblock list_table_headers %}
               {% block list_table_column_settings_header %}
                 {% if column_settings_btn|default:False %}
-                  <th class="column-settings-header" style="width: auto; min-width: 32px; position: relative; text-align: center;">
-                    <button type="button" class="btn btn-link btn-sm p-0" id="tableColumnSettingsBtn" title="自定义显示列" style="text-decoration: none; color: #FFC107 !important; border: none; background: none; padding: 0;">
-                      <i class="bi bi-gear-fill" style="color: #FFC107 !important; font-size: 1.1rem;"></i>
+                  <th class="column-settings-header approval-list-th-settings">
+                    <button type="button" class="btn btn-link btn-sm p-0 approval-list-btn-column-settings" id="tableColumnSettingsBtn" title="自定义显示列">
+                      <i class="bi bi-gear-fill"></i>
                     </button>
                   </th>
                 {% endif %}
@@ -396,9 +413,9 @@
             <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
               <i class="bi bi-eye"></i>
             </a>
-            {% if item.status == 'pending' and item.workflow.allow_withdraw %}
+            {% if item.status == 'pending' %}
             <span class="action-separator">|</span>
-            <a href="#" class="action-delete" data-action="workflow-approval-withdraw" data-withdraw-url="{% url 'workflow_engine:approval_withdraw' item.id %}" title="撤回">
+            <a href="#" class="action-delete" data-action="workflow-approval-withdraw" data-withdraw-url="{% url 'workflow_engine:approval_withdraw' item.id %}" title="撤回流程">
               <i class="bi bi-arrow-counterclockwise"></i>
             </a>
             {% endif %}
@@ -426,16 +443,16 @@
         </div>
         {% block list_empty_hint %}
         {% if not tab or tab == 'pending' %}
-        <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
+        <p class="text-muted approval-list-empty-hint">
           💡 提示：如果您刚刚完成了审批，审批事项可能已进入下一节点或已完成。<br>
           您可以在"历史审批"标签中查看所有已审批的记录。
         </p>
         {% elif tab == 'historical' %}
-        <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
+        <p class="text-muted approval-list-empty-hint">
           您审批过的记录将显示在这里
         </p>
         {% elif tab == 'my_submitted' %}
-        <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
+        <p class="text-muted approval-list-empty-hint">
           您提交的所有审批申请将显示在这里，包括审批中、已通过、已驳回等状态
         </p>
         {% endif %}
@@ -637,9 +654,9 @@
           <table class="table table-hover">
             <thead>
               <tr>
-                <th style="width: 60px;">显示</th>
+                <th class="approval-list-modal-th-toggle">显示</th>
                 <th>列名称</th>
-                <th style="width: 50px;">排序</th>
+                <th class="approval-list-modal-th-order">排序</th>
               </tr>
             </thead>
             <tbody id="columnSettingsList">

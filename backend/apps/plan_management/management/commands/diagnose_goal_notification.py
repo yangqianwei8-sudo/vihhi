@@ -78,16 +78,16 @@ class Command(BaseCommand):
             self.stdout.write("  该函数会通知目标的所有者（owner）接收目标")
             return
         
-        # 检查目标公司
+        # 检查目标公司（StrategicGoal 无 company 字段，用 responsible_department.company）
         goal_company = None
-        if hasattr(goal, 'company'):
+        if hasattr(goal, 'company') and goal.company:
             goal_company = goal.company
-            if goal_company:
-                self.stdout.write(f"  目标公司: {goal_company.name} (ID: {goal_company.id})")
-            else:
-                self.stdout.write(self.style.WARNING(f"  ⚠️  目标没有关联公司"))
+        elif getattr(goal, 'responsible_department', None):
+            goal_company = goal.responsible_department.company
+        if goal_company:
+            self.stdout.write(f"  目标公司: {goal_company.name} (ID: {goal_company.id})")
         else:
-            self.stdout.write(self.style.WARNING(f"  ⚠️  目标模型没有 company 属性"))
+            self.stdout.write(self.style.WARNING(f"  ⚠️  目标未关联公司（无 company 或 responsible_department.company）"))
         
         self.stdout.write("")
         

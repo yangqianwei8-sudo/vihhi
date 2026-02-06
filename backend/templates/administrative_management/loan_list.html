@@ -19,6 +19,49 @@
       {% endfor %}
     </select>
   </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">借款类型</label>
+    <select name="loan_type" class="form-select">
+      <option value="">全部类型</option>
+      {% for code, label in loan_type_choices %}
+      <option value="{{ code }}" {% if loan_type == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">部门</label>
+    <select name="department_id" class="form-select">
+      <option value="">全部部门</option>
+      {% for dept in departments %}
+      <option value="{{ dept.id }}" {% if department_id == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">申请人</label>
+    <select name="applicant_id" class="form-select">
+      <option value="">全部申请人</option>
+      {% for user in users %}
+      <option value="{{ user.id }}" {% if applicant_id == user.id|stringformat:"s" %}selected{% endif %}>{{ user.get_full_name|default:user.username }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">申请日期（起）</label>
+    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">申请日期（止）</label>
+    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">金额（最小）</label>
+    <input type="number" name="amount_min" class="form-control" placeholder="最小金额" value="{{ amount_min }}" step="0.01" min="0">
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">金额（最大）</label>
+    <input type="number" name="amount_max" class="form-control" placeholder="最大金额" value="{{ amount_max }}" step="0.01" min="0">
+  </div>
 {% endblock list_filters_content %}
 
 {% block list_table_headers %}

@@ -7,7 +7,7 @@ from typing import Optional, List, Dict, Any, Callable
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalInstance, ApprovalRecord
+from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalInstance, ApprovalRecord, WorkflowBinding
 # 延迟导入 ApprovalEngine 以避免循环导入
 # from backend.apps.workflow_engine.services import ApprovalEngine
 from backend.apps.system_management.models import User
@@ -63,8 +63,52 @@ class UniversalApprovalService:
         if not self.workflow_code:
             raise ValueError("必须提供 workflow_code 或设置类的 WORKFLOW_CODE 属性")
     
-    def get_workflow(self) -> Optional[WorkflowTemplate]:
-        """获取审批流程模板"""
+    def get_workflow_from_binding(self, obj: Any, action: str = 'submit') -> Optional[WorkflowTemplate]:
+        """
+        从绑定配置获取审批流程模板（配置优先）
+        
+        Args:
+            obj: 业务对象
+            action: 操作类型，默认为 'submit'
+            
+        Returns:
+            WorkflowTemplate: 审批流程模板，如果未配置则返回 None
+        """
+        try:
+            content_type = ContentType.objects.get_for_model(obj)
+            binding = WorkflowBinding.objects.filter(
+                content_type=content_type,
+                action=action,
+                is_active=True
+            ).order_by('-priority').first()
+            
+            if binding and binding.workflow_template:
+                logger.info(f'从绑定配置获取流程模板: {binding.workflow_template.code} (绑定ID: {binding.id})')
+                return binding.workflow_template
+        except Exception as e:
+            logger.warning(f'获取绑定配置失败: {str(e)}')
+        
+        return None
+    
+    def get_workflow(self, obj: Any = None, action: str = 'submit', use_binding: bool = True) -> Optional[WorkflowTemplate]:
+        """
+        获取审批流程模板（支持配置优先、兜底原逻辑）
+        
+        Args:
+            obj: 业务对象（可选，如果提供则尝试从绑定配置获取）
+            action: 操作类型，默认为 'submit'
+            use_binding: 是否使用绑定配置，默认为 True
+            
+        Returns:
+            WorkflowTemplate: 审批流程模板，如果未配置则返回 None
+        """
+        # 如果启用绑定配置且提供了业务对象，先尝试从绑定配置获取
+        if use_binding and obj is not None:
+            workflow = self.get_workflow_from_binding(obj, action)
+            if workflow:
+                return workflow
+        
+        # 兜底：使用原逻辑（按 WORKFLOW_CODE 查找）
         try:
             return WorkflowTemplate.objects.get(
                 code=self.workflow_code,
@@ -133,8 +177,8 @@ class UniversalApprovalService:
                 logger.warning(f'对象 {obj} 已有待审批实例: {existing_instance.instance_number}')
                 return existing_instance
             
-            # 获取审批流程模板
-            workflow = self.get_workflow()
+            # 获取审批流程模板（配置优先、兜底原逻辑）
+            workflow = self.get_workflow(obj=obj, action='submit', use_binding=True)
             if not workflow:
                 logger.warning(f'审批流程未配置: {self.workflow_code}')
                 return None
@@ -494,4 +538,17 @@ class UniversalApprovalService:
         
         logger.info(f'创建审批流程模板: {code}')
         return workflow
+    
+    def handle_approval_result(self, instance: ApprovalInstance, approval_status: str):
+        """
+        处理审批结果（钩子方法，子类可重写）
+        
+        Args:
+            instance: 审批实例
+            approval_status: 审批状态 ('approved' 或 'rejected')
+        
+        注意：此方法由审批引擎在审批完成时调用，子类应重写此方法以实现业务特定的状态更新逻辑
+        """
+        # 默认实现：仅记录日志
+        logger.info(f'审批结果处理（默认实现）: {instance.content_type.model}#{instance.object_id} -> {approval_status}')
 

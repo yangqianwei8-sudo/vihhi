@@ -212,6 +212,17 @@ def customer_list(request):
     return render(request, "customer_management/customer_list.html", context)
 
 
+def _set_customer_form_basic_initial(form, request):
+    """为 create_form_base 规定的三字段（所属部门、负责人、表单编号）设置展示初值"""
+    if request.user.is_authenticated:
+        form.initial.setdefault(
+            'responsible_department',
+            request.user.department.name if getattr(request.user, 'department', None) and request.user.department else '未设置部门'
+        )
+        form.initial.setdefault('responsible_person', request.user.get_full_name() or request.user.username)
+    form.initial.setdefault('form_number', '系统自动生成')
+
+
 @login_required
 def customer_create(request):
     """创建客户"""
@@ -253,11 +264,13 @@ def customer_create(request):
                         permission_set, 
                         active_id='customer_list'
                     )
+                    _set_customer_form_basic_initial(form, request)
                     context.update({
                         'form': form,
                         'client_type_choices': [(ct.id, ct.name) for ct in ClientType.objects.filter(is_active=True).order_by('display_order', 'name')],
                         'source_choices': Client.SOURCE_CHOICES,
                     })
+                    context['list_url_name'] = 'business_pages:customer_list'
                     context['cancel_url_name'] = 'business_pages:customer_list'
                     context['form_page_subtitle_text'] = '请填写客户基本信息'
                     context['create_url_name'] = 'business_pages:customer_create'
@@ -288,11 +301,13 @@ def customer_create(request):
                         permission_set, 
                         active_id='customer_list'
                     )
+                    _set_customer_form_basic_initial(form, request)
                     context.update({
                         'form': form,
                         'client_type_choices': [(ct.id, ct.name) for ct in ClientType.objects.filter(is_active=True).order_by('display_order', 'name')],
                         'source_choices': Client.SOURCE_CHOICES,
                     })
+                    context['list_url_name'] = 'business_pages:customer_list'
                     context['cancel_url_name'] = 'business_pages:customer_list'
                     context['form_page_subtitle_text'] = '请填写客户基本信息'
                     context['create_url_name'] = 'business_pages:customer_create'
@@ -371,11 +386,13 @@ def customer_create(request):
                         permission_set, 
                         active_id='customer_list'
                     )
+                    _set_customer_form_basic_initial(form, request)
                     context.update({
                         'form': form,
                         'client_type_choices': [(ct.id, ct.name) for ct in ClientType.objects.filter(is_active=True).order_by('display_order', 'name')],
                         'source_choices': Client.SOURCE_CHOICES,
                     })
+                    context['list_url_name'] = 'business_pages:customer_list'
                     context['cancel_url_name'] = 'business_pages:customer_list'
                     context['form_page_subtitle_text'] = '请填写客户基本信息'
                     context['create_url_name'] = 'business_pages:customer_create'
@@ -394,66 +411,7 @@ def customer_create(request):
                 client.client_type_id = client.client_type.id
             
             client.save()
-            
-            # 自动启动审批流程
-            try:
-                from django.contrib.contenttypes.models import ContentType
-                from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalInstance
-                from backend.apps.workflow_engine.services import ApprovalEngine
-                
-                # 检查是否已有正在进行的审批
-                content_type = ContentType.objects.get_for_model(Client)
-                existing_instance = ApprovalInstance.objects.filter(
-                    content_type=content_type,
-                    object_id=client.id,
-                    status='pending'
-                ).first()
-                
-                if not existing_instance:
-                    # 获取客户管理审批流程
-                    try:
-                        workflow = WorkflowTemplate.objects.get(
-                            code='customer_management_approval',
-                            status='active'
-                        )
-                        
-                        # 启动审批流程
-                        comment = f'申请创建客户：{client.name}（统一信用代码：{client.unified_credit_code or "未填写"}）'
-                        instance = ApprovalEngine.start_approval(
-                            workflow=workflow,
-                            content_object=client,
-                            applicant=request.user,
-                            comment=comment
-                        )
-                        
-                        messages.success(
-                            request, 
-                            f'客户创建成功，已自动提交审批（审批编号：{instance.instance_number}）'
-                        )
-                    except WorkflowTemplate.DoesNotExist:
-                        messages.warning(
-                            request, 
-                            '客户创建成功，但审批流程未配置，请联系管理员配置审批流程'
-                        )
-                    except Exception as e:
-                        import logging
-                        logger = logging.getLogger(__name__)
-                        logger.exception('启动客户审批流程失败: %s', str(e))
-                        messages.warning(
-                            request, 
-                            f'客户创建成功，但启动审批流程失败：{str(e)}，请联系管理员'
-                        )
-                else:
-                    messages.success(
-                        request, 
-                        f'客户创建成功，该客户已有正在进行的审批流程（审批编号：{existing_instance.instance_number}）'
-                    )
-            except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.exception('客户创建后处理审批流程时出错: %s', str(e))
-                messages.success(request, '客户创建成功')
-            
+            messages.success(request, '客户创建成功')
             return redirect('business_pages:customer_detail', client_id=client.id)
         else:
             messages.error(request, '表单验证失败，请检查输入')
@@ -473,11 +431,13 @@ def customer_create(request):
         active_id='customer_list'
     )
     
+    _set_customer_form_basic_initial(form, request)
     context.update({
         'form': form,
         'client_type_choices': [(ct.id, ct.name) for ct in ClientType.objects.filter(is_active=True).order_by('display_order', 'name')],
         'source_choices': Client.SOURCE_CHOICES,
     })
+    context['list_url_name'] = 'business_pages:customer_list'
     context['cancel_url_name'] = 'business_pages:customer_list'
     context['form_page_subtitle_text'] = '请填写客户基本信息'
     context['create_url_name'] = 'business_pages:customer_create'
@@ -632,7 +592,17 @@ def customer_lead_detail(request, lead_id):
         return redirect('customer_pages:customer_lead_list')
 
     can_edit = _check_customer_permission('customer_management.client.edit', permission_set)
+    can_delete = _check_customer_permission('customer_management.client.edit', permission_set)
+    can_create_first_visit = _check_customer_permission('customer_management.relationship.edit', permission_set)
     can_add_followup = can_edit  # 跟进入口暂移除，此处保留变量供模板
+
+    # 仅当线索已转化且该客户尚未完成过首次拜访时，才显示「首次拜访」按钮（不存在「第二次首次拜访」）
+    show_first_visit_button = False
+    if can_create_first_visit and lead.converted_client_id:
+        has_completed_visit = VisitPlan.objects.filter(
+            client_id=lead.converted_client_id, status='completed'
+        ).exists()
+        show_first_visit_button = not has_completed_visit
 
     context = _context(
         f"线索详情 - {lead.company_name}",
@@ -645,7 +615,11 @@ def customer_lead_detail(request, lead_id):
     )
     context.update({
         'lead': lead,
+        'object': lead,
         'can_edit': can_edit,
+        'can_delete': can_delete,
+        'can_create_first_visit': can_create_first_visit,
+        'show_first_visit_button': show_first_visit_button,
         'can_add_followup': False,  # 跟进入口已移除
         'followups': [],  # 无独立跟进表，仅展示 latest_followup_note
     })
@@ -721,6 +695,24 @@ def customer_lead_delete(request, lead_id):
 
 
 @login_required
+def customer_lead_mark_lost(request, lead_id):
+    """标记线索为无效（已流失）：闭环不转化客户，保留记录便于统计"""
+    lead = get_object_or_404(CustomerLead, id=lead_id, is_active=True)
+    permission_set = get_user_permission_codes(request.user)
+    if not _check_customer_permission('customer_management.client.edit', permission_set):
+        messages.error(request, '您没有权限标记线索为无效')
+        return redirect('customer_pages:customer_lead_list')
+
+    if request.method != 'POST':
+        return redirect('customer_pages:customer_lead_detail', lead_id=lead.id)
+
+    lead.follow_status = 'lost'
+    lead.save(update_fields=['follow_status'])
+    messages.success(request, f'已标记线索「{lead.company_name}」为无效（已流失）')
+    return redirect('customer_pages:customer_lead_detail', lead_id=lead.id)
+
+
+@login_required
 def customer_lead_claim(request, lead_id):
     """认领线索（设置负责人为当前用户）"""
     lead = get_object_or_404(CustomerLead, id=lead_id, is_active=True)
@@ -788,7 +780,6 @@ def customer_lead_convert(request, lead_id):
         context.update({'lead': lead})
         return render(request, "customer_management/customer_lead_convert_confirm.html", context)
 
-    logger = logging.getLogger(__name__)
     try:
         with transaction.atomic():
             # 负责人一致性：Lead 认领人（responsible_user）或当前用户 作为 Client.responsible_user
@@ -1008,16 +999,28 @@ def customer_filing_create(request):
     # 生成左侧菜单
     context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
-        active_id='customer_lead_list'
+        active_id='customer_list'
     )
     
+    # 从客户详情进入时，返回/取消应回到客户详情；否则回到客户列表
+    client_id = request.GET.get('client_id')
+    if client_id:
+        list_url = reverse('business_pages:customer_detail', args=[client_id])
+        cancel_url_name = None
+        list_url_name = None
+    else:
+        list_url = reverse('customer_pages:customer_list')
+        cancel_url_name = 'customer_pages:customer_list'
+        list_url_name = 'customer_pages:customer_list'
+    _set_customer_form_basic_initial(form, request)
     context.update({
         'form': form,
         'filing_type_choices': CustomerFiling.FILING_TYPE_CHOICES,
-        'cancel_url_name': 'customer_pages:customer_lead_list',
+        'cancel_url_name': cancel_url_name,
         'form_page_subtitle_text': '请填写客户备案信息',
         'create_url_name': 'customer_pages:customer_filing_create',
-        'list_url': reverse('customer_pages:customer_lead_list'),
+        'list_url': list_url,
+        'list_url_name': list_url_name,
     })
     return render(request, "customer_management/customer_filing_form.html", context)
 
@@ -1065,71 +1068,6 @@ def customer_detail(request, client_id):
         execution_records = []
         execution_count = 0
     
-    # 获取审批信息
-    approval_instance = None
-    approval_records = []
-    approval_path_nodes = []
-    can_submit_approval = False
-    try:
-        from django.contrib.contenttypes.models import ContentType
-        from backend.apps.workflow_engine.models import ApprovalInstance, ApprovalRecord
-        from collections import defaultdict
-        
-        content_type = ContentType.objects.get_for_model(Client)
-        approval_instance = ApprovalInstance.objects.filter(
-            content_type=content_type,
-            object_id=client.id
-        ).select_related('workflow', 'applicant', 'current_node').prefetch_related(
-            'workflow__nodes'
-        ).order_by('-created_time').first()
-        
-        if approval_instance:
-            approval_records = ApprovalRecord.objects.filter(
-                instance=approval_instance
-            ).select_related('node', 'approver', 'transferred_to').order_by('node__sequence', 'approval_time')
-            
-            # 准备审批路径数据
-            workflow_nodes = approval_instance.workflow.nodes.all().order_by('sequence')
-            records_by_node = defaultdict(list)
-            for record in approval_records:
-                records_by_node[record.node_id].append(record)
-            
-            # 构建审批路径节点列表
-            for node in workflow_nodes:
-                node_records = records_by_node.get(node.id, [])
-                node_status = 'pending'  # 默认待审批
-                
-                # 判断节点状态
-                if any(r.result == 'approved' for r in node_records):
-                    node_status = 'approved'
-                elif any(r.result == 'rejected' for r in node_records):
-                    node_status = 'rejected'
-                elif any(r.result == 'pending' for r in node_records):
-                    node_status = 'pending'
-                elif node.node_type in ['start', 'end']:
-                    node_status = 'completed'
-                else:
-                    # 检查是否是当前节点
-                    if approval_instance.current_node and approval_instance.current_node.id == node.id:
-                        node_status = 'current'
-                    else:
-                        node_status = 'waiting'
-                
-                approval_path_nodes.append({
-                    'node': node,
-                    'records': node_records,
-                    'status': node_status,
-                    'is_current': approval_instance.current_node and approval_instance.current_node.id == node.id,
-                })
-        
-        # 检查是否可以提交审批（有权限且没有正在进行的审批）
-        can_submit_approval = _check_customer_permission('customer_management.client.approve', permission_set) and not approval_instance
-    except Exception:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('获取审批信息失败')
-        pass
-    
     context = _context(
         f"客户详情 - {client.name}",
         "👤",
@@ -1144,10 +1082,15 @@ def customer_detail(request, client_id):
     )
     
     can_manage = _check_customer_permission('customer_management.client.edit', permission_set)
+    # 仅当该客户尚未有过备案记录时显示「客户备案」按钮，备案后不再显示
+    show_filing_button = can_manage and not client.filings.exists()
     context.update({
+        'object': client,
         'client': client,
         'can_edit': can_manage,
+        'can_delete': False,
         'can_manage': can_manage,
+        'show_filing_button': show_filing_button,
         'projects': related_projects,
         'opportunities': related_opportunities,
         'contracts': related_contracts,
@@ -1155,10 +1098,7 @@ def customer_detail(request, client_id):
         'execution_records': execution_records,
         'execution_count': execution_count,
         'total_execution_amount': client.total_execution_amount or 0,
-        'approval_instance': approval_instance,
-        'approval_records': approval_records,
-        'approval_path_nodes': approval_path_nodes,
-        'can_submit_approval': can_submit_approval,
+        'can_submit_approval': False,
     })
     return render(request, "customer_management/customer_detail.html", context)
 
@@ -1326,6 +1266,7 @@ def customer_edit(request, client_id):
         active_id='customer_list'
     )
     
+    _set_customer_form_basic_initial(form, request)
     context.update({
         'client': client,
         'form': form,
@@ -1336,6 +1277,7 @@ def customer_edit(request, client_id):
         'execution_count': execution_records.count(),
         'total_execution_amount': client.total_execution_amount or 0,
     })
+    context['list_url_name'] = 'business_pages:customer_list'
     context['cancel_url_name'] = 'business_pages:customer_list'
     context['form_page_subtitle_text'] = '请填写客户基本信息'
     context['create_url_name'] = 'business_pages:customer_create'
@@ -1621,91 +1563,6 @@ def customer_export(request):
         logger.exception('导出客户数据失败: %s', str(e))
         messages.error(request, f'导出失败：{str(e)}')
         return redirect('business_pages:customer_list')
-
-
-@login_required
-def customer_submit_approval(request, client_id):
-    """提交客户审批"""
-    from backend.apps.customer_management.models import Client
-    
-    client = get_object_or_404(Client, id=client_id)
-    permission_set = get_user_permission_codes(request.user)
-    
-    # 权限检查
-    if not _check_customer_permission('customer_management.client.edit', permission_set):
-        messages.error(request, '您没有权限提交客户审批')
-        return redirect('business_pages:customer_detail', client_id=client_id)
-    
-    if request.method == 'POST':
-        try:
-            from django.contrib.contenttypes.models import ContentType
-            from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalInstance
-            from backend.apps.workflow_engine.services import ApprovalEngine
-            
-            # 检查是否已有正在进行的审批
-            content_type = ContentType.objects.get_for_model(Client)
-            existing_instance = ApprovalInstance.objects.filter(
-                content_type=content_type,
-                object_id=client.id,
-                status__in=['pending', 'in_progress']
-            ).first()
-            
-            if existing_instance:
-                messages.warning(request, f'该客户已有正在进行的审批流程（审批编号：{existing_instance.instance_number}）')
-                return redirect('business_pages:customer_detail', client_id=client_id)
-            
-            # 获取客户管理审批流程
-            try:
-                workflow = WorkflowTemplate.objects.get(
-                    code='customer_management_approval',
-                    status='active'
-                )
-            except WorkflowTemplate.DoesNotExist:
-                messages.error(request, '客户管理审批流程未配置，请联系管理员')
-                return redirect('business_pages:customer_detail', client_id=client_id)
-            
-            # 启动审批流程
-            comment = request.POST.get('comment', f'申请审批客户：{client.name}')
-            instance = ApprovalEngine.start_approval(
-                workflow=workflow,
-                content_object=client,
-                applicant=request.user,
-                comment=comment
-            )
-            
-            messages.success(request, f'客户审批已提交（审批编号：{instance.instance_number}）')
-            return redirect('business_pages:customer_detail', client_id=client_id)
-            
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.exception('提交客户审批失败: %s', str(e))
-            messages.error(request, f'提交客户审批失败：{str(e)}')
-            return redirect('business_pages:customer_detail', client_id=client_id)
-    
-    # GET 请求，显示提交审批确认页面
-    from django.contrib.contenttypes.models import ContentType
-    from backend.apps.workflow_engine.models import ApprovalInstance
-    
-    # 检查是否已有正在进行的审批
-    content_type = ContentType.objects.get_for_model(Client)
-    existing_instance = ApprovalInstance.objects.filter(
-        content_type=content_type,
-        object_id=client.id,
-        status__in=['pending', 'in_progress']
-    ).first()
-    
-    context = _context(
-        "提交客户审批",
-        "📋",
-        f"提交客户 {client.name} 进行审批",
-        request=request,
-    )
-    context.update({
-        'client': client,
-        'existing_instance': existing_instance,
-    })
-    return render(request, "customer_management/customer_submit_approval.html", context)
 
 
 @login_required
@@ -6596,30 +6453,14 @@ def visit_plan_create(request):
     )
     
     # 获取所有客户的地址信息，用于前端自动填充
-    # 只获取已审批通过的、该用户负责的客户
     clients_with_address = {}
     clients_opportunities = {}
     
     if request.user:
-        from django.contrib.contenttypes.models import ContentType
-        from backend.apps.workflow_engine.models import ApprovalInstance
-        
-        # 获取已审批通过的客户（通过 approval_status 或 ApprovalInstance）
-        client_content_type = ContentType.objects.get_for_model(Client)
-        approved_instance_ids = ApprovalInstance.objects.filter(
-            content_type=client_content_type,
-            status='approved'
-        ).values_list('object_id', flat=True)
-        
-        # 只显示该用户作为负责人的、已审批通过的客户
-        if approved_instance_ids:
-            approved_clients = Client.objects.filter(
-                is_active=True,
-                responsible_user=request.user,
-                id__in=approved_instance_ids
-            ).distinct()
-        else:
-            approved_clients = Client.objects.none()
+        approved_clients = Client.objects.filter(
+            is_active=True,
+            responsible_user=request.user
+        ).distinct()
         
         # 获取客户地址信息
         for client in approved_clients.values('id', 'company_address'):
@@ -6701,55 +6542,20 @@ def first_visit_create(request):
         active_id='visit_list'
     )
     
-    # 获取客户地址信息和商机信息（用于前端自动填充）
+    # 获取客户地址信息（用于前端自动填充拜访地点）
     clients_with_address = {}
-    clients_opportunities = {}
-    
     if request.user:
-        from django.contrib.contenttypes.models import ContentType
-        from backend.apps.workflow_engine.models import ApprovalInstance
-        
-        client_content_type = ContentType.objects.get_for_model(Client)
-        approved_instance_ids = ApprovalInstance.objects.filter(
-            content_type=client_content_type,
-            status='approved'
-        ).values_list('object_id', flat=True)
-        
-        if approved_instance_ids:
-            approved_clients = Client.objects.filter(
-                is_active=True,
-                responsible_user=request.user,
-                id__in=approved_instance_ids
-            ).distinct()
-        else:
-            approved_clients = Client.objects.none()
-        
-        # 获取客户地址信息
+        approved_clients = Client.objects.filter(
+            is_active=True,
+            responsible_user=request.user
+        ).distinct()
         for client in approved_clients.values('id', 'company_address'):
             clients_with_address[str(client['id'])] = client['company_address'] or ''
-        
-        # 获取客户及其对应的商机
-        opportunities = BusinessOpportunity.objects.filter(
-            client__in=approved_clients,
-            status__in=['potential', 'initial_contact', 'requirement_confirmed', 'quotation', 'negotiation']
-        ).select_related('client').order_by('-created_time')
-        
-        for opp in opportunities:
-            client_id = str(opp.client.id) if opp.client else ''
-            if client_id and client_id not in clients_opportunities:
-                clients_opportunities[client_id] = []
-            if client_id:
-                clients_opportunities[client_id].append({
-                    'id': opp.id,
-                    'name': opp.name,
-                    'client_name': opp.client.name if opp.client else ''
-                })
     
     import json
     context.update({
         'form': form,
         'clients_with_address_json': json.dumps(clients_with_address),
-        'clients_opportunities_json': json.dumps(clients_opportunities),
         'cancel_url_name': 'customer_pages:customer_visit',
         'form_page_subtitle_text': '请填写首次拜访信息（不需要选择联系人）',
         'create_url_name': 'customer_pages:first_visit_create',

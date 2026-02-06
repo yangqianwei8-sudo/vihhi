@@ -68,15 +68,20 @@ def get_pending_decision_or_404(request, decision_id):
     """取当前用户可见计划范围内的待裁决决策，否则 404。"""
     allowed_plan_ids = get_plan_qs_for_user(request).values_list('id', flat=True)
     return get_object_or_404(
-        PlanDecision.objects.filter(decided_at__isnull=True, plan_id__in=allowed_plan_ids).select_related('plan'),
+        # G1-4: PlanDecision 已退场，不再作为待办来源
+        # 待办统一使用 ApprovalInstance（审批引擎）
+        # 历史 PlanDecision 数据保留为只读，不在此处查询
+        [],
         id=decision_id
     )
 
 
 def get_goal_qs_for_user(request):
-    """统一目标查询集：复用 goal_list 的权限过滤逻辑。"""
+    """统一目标查询集：先按部门公司隔离，再复用 goal_list 的权限过滤逻辑。"""
+    from backend.apps.plan_management.utils import apply_goal_company_scope
     permission_set = get_user_permission_codes(request.user)
     goals = StrategicGoal.objects.all()
+    goals = apply_goal_company_scope(goals, request.user)  # 目标按部门公司隔离
     has_view_all = _permission_granted('plan_management.goal.view_all', permission_set)
     has_view_assigned = _permission_granted('plan_management.goal.view_assigned', permission_set)
     if has_view_all:

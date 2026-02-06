@@ -18,9 +18,10 @@ from backend.apps.settlement_management.models import (
 )
 # from backend.apps.production_quality.models import Opinion  # 已删除生产质量模块
 from .forms import ProjectSettlementForm, ContractSettlementForm
-# 产值管理相关服务函数已迁移到output_value_management
-# 结算管理仍需要调用产值管理的服务函数
-from backend.apps.output_value_management.services import get_project_output_value_for_settlement
+# 产值已收敛至 V1 API（GET /api/output/v1/opportunity/<id>/），结算页不再读写旧产值记录，使用占位数据
+def _output_value_placeholder_for_settlement(project):
+    """占位：不再从产值记录表读取，返回零产值结构供结算页展示。"""
+    return {'total_output_value': 0, 'confirmed_output_value': 0, 'records_count': 0}
 from backend.apps.production_management.models import Project
 from backend.apps.system_management.models import User
 from backend.apps.system_management.services import get_user_permission_codes
@@ -271,7 +272,7 @@ def project_settlement_detail(request, settlement_id):
             return redirect('settlement_pages:project_settlement_list')
     
     # 获取项目产值统计（从产值管理模块获取）
-    output_value_summary = get_project_output_value_for_settlement(settlement.project)
+    output_value_summary = _output_value_placeholder_for_settlement(settlement.project)
     total_calculated_value = output_value_summary['total_output_value']
     
     # 如果结算单的累计产值未设置，自动更新
@@ -379,7 +380,7 @@ def project_settlement_create(request):
                         settlement.contract_amount = latest_contract.contract_amount or Decimal('0')
                 
                 # 从产值管理模块获取产值统计
-                output_value_summary = get_project_output_value_for_settlement(settlement.project)
+                output_value_summary = _output_value_placeholder_for_settlement(settlement.project)
                 if output_value_summary['total_output_value'] > 0:
                     settlement.total_output_value = output_value_summary['total_output_value']
             

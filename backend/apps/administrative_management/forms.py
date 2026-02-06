@@ -455,10 +455,22 @@ class AnnouncementForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
-        self.fields['target_departments'].queryset = Department.objects.filter(is_active=True).order_by('name')
-        self.fields['target_roles'].queryset = Role.objects.filter(is_active=True).order_by('name')
-        self.fields['target_users'].queryset = User.objects.filter(is_active=True).order_by('username')
+        dept_qs = Department.objects.filter(is_active=True).order_by('name')
+        if request and getattr(request.user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=request.user.company_id)
+        self.fields['target_departments'].queryset = dept_qs
+        # P0-4: 角色=全局或当前公司；用户=当前公司
+        from django.db.models import Q
+        role_qs = Role.objects.filter(is_active=True).order_by('name')
+        if request and getattr(request.user, 'company_id', None):
+            role_qs = role_qs.filter(Q(company_id__isnull=True) | Q(company_id=request.user.company_id))
+        self.fields['target_roles'].queryset = role_qs
+        user_qs = User.objects.filter(is_active=True).order_by('username')
+        if request and getattr(request.user, 'company_id', None):
+            user_qs = user_qs.filter(company_id=request.user.company_id)
+        self.fields['target_users'].queryset = user_qs
         self.fields['target_departments'].required = False
         self.fields['target_roles'].required = False
         self.fields['target_users'].required = False
@@ -559,8 +571,11 @@ class SealBorrowingForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        # 设置固定字段的查询集和初始值
-        self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
+        # 设置固定字段的查询集和初始值（P0-3: 部门按用户公司过滤）
+        dept_qs = Department.objects.filter(is_active=True)
+        if getattr(user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=user.company_id)
+        self.fields['responsible_department'].queryset = dept_qs
         self.fields['responsible_person'].queryset = User.objects.filter(is_active=True)
         
         # 设置默认值：所属部门为当前用户所在部门，负责人为当前用户
@@ -695,8 +710,11 @@ class SealUsageForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.user = user  # 保存user以便在save方法中使用
         
-        # 设置固定字段的查询集和初始值
-        self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
+        # 设置固定字段的查询集和初始值（P0-3: 部门按用户公司过滤）
+        dept_qs = Department.objects.filter(is_active=True)
+        if getattr(user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=user.company_id)
+        self.fields['responsible_department'].queryset = dept_qs
         self.fields['responsible_person'].queryset = User.objects.filter(is_active=True)
         
         if user:
@@ -852,9 +870,13 @@ class FixedAssetForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         self.fields['current_user'].queryset = User.objects.filter(is_active=True).order_by('username')
-        self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('name')
+        dept_qs = Department.objects.filter(is_active=True).order_by('name')
+        if request and getattr(request.user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=request.user.company_id)
+        self.fields['department'].queryset = dept_qs
         self.fields['current_user'].required = False
 
 
@@ -1176,9 +1198,13 @@ class TravelApplicationForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         self.fields['travelers'].queryset = User.objects.filter(is_active=True).order_by('username')
-        self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('name')
+        dept_qs = Department.objects.filter(is_active=True).order_by('name')
+        if request and getattr(request.user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=request.user.company_id)
+        self.fields['department'].queryset = dept_qs
         self.fields['travelers'].required = False
         self.fields['travel_budget'].required = False
         self.fields['department'].required = False
@@ -1527,8 +1553,11 @@ class LoanApplicationForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        # 设置固定字段的查询集和初始值
-        self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
+        # 设置固定字段的查询集和初始值（P0-3: 部门按用户公司过滤）
+        dept_qs = Department.objects.filter(is_active=True)
+        if getattr(user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=user.company_id)
+        self.fields['responsible_department'].queryset = dept_qs
         self.fields['responsible_person'].queryset = User.objects.filter(is_active=True)
         self.fields['borrower'].queryset = User.objects.filter(is_active=True)
         

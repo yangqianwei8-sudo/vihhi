@@ -5,13 +5,8 @@ from . import views_settlement_items
 app_name = "financial_settlement"
 
 urlpatterns = [
-    # 产值管理
-    path("output-value/template/", views_settlement.output_value_template_manage, name="output_value_template_manage"),
-    path("output-value/records/", views_settlement.output_value_record_list, name="output_value_record_list"),
-    path("output-value/records/<int:record_id>/confirm/", views_settlement.output_value_record_confirm, name="output_value_record_confirm"),
-    path("output-value/project/<int:project_id>/", views_settlement.project_output_value_detail, name="project_output_value_detail"),
-    path("output-value/statistics/", views_settlement.output_value_statistics, name="output_value_statistics"),
-    
+    # 产值管理已收敛至 output_value_management 应用（/output-value/）及 V1 API（/api/output/v1/），此处不再重复挂载
+
     # 项目结算管理
     path("project-settlement/", views_settlement.project_settlement_list, name="project_settlement_list"),
     path("project-settlement/create/", views_settlement.project_settlement_create, name="project_settlement_create"),

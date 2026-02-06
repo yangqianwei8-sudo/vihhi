@@ -61,6 +61,7 @@ from backend.apps.administrative_management.models import (
     TravelApplication, LoanApplication,
     Supplier, PurchaseContract, PurchasePayment,
 )
+from backend.apps.system_management.models import Department, User
 from .forms import (
     OfficeSupplyForm, SupplyCategoryForm, MeetingRoomForm, MeetingRoomBookingForm, MeetingForm, MeetingRecordForm,
     VehicleForm, VehicleBookingForm, ReceptionRecordForm,
@@ -2656,24 +2657,24 @@ def seal_borrowing_create(request):
                 from backend.apps.workflow_engine.models import WorkflowTemplate
                 from backend.apps.workflow_engine.services import ApprovalEngine
                 
-                # 获取印章借用审批流程
-                workflow = WorkflowTemplate.objects.filter(
-                    code='seal_borrowing_approval',
-                    status='active'
-                ).first()
+                # 启动审批流程（使用通用审批服务）
+                from backend.apps.administrative_management.services import SealBorrowingApprovalService
                 
-                if workflow:
-                    # 启动审批流程
-                    approval_instance = ApprovalEngine.start_approval(
-                        workflow=workflow,
-                        content_object=borrowing,
-                        applicant=request.user,
-                        comment=f'申请借用印章：{borrowing.seal.seal_name}，借用事由：{borrowing.borrowing_reason[:50]}'
-                    )
+                service = SealBorrowingApprovalService()
+                approval_instance = service.submit_approval(
+                    obj=borrowing,
+                    applicant=request.user,
+                    comment=f'申请借用印章：{borrowing.seal.seal_name}，借用事由：{borrowing.borrowing_reason[:50]}'
+                )
+                
+                if approval_instance:
                     messages.success(request, f'印章借用申请 {borrowing.borrowing_number} 提交成功！审批流程已启动，审批单号：{approval_instance.instance_number}')
                 else:
-                    # 如果没有配置审批流程，使用原有的审批逻辑
-                    messages.success(request, f'印章借用申请 {borrowing.borrowing_number} 提交成功！')
+                    messages.warning(request, f'印章借用申请 {borrowing.borrowing_number} 提交成功，但审批流程未配置，请联系管理员')
+            except ValueError as e:
+                # 验证失败
+                messages.error(request, f'提交审批失败：{str(e)}')
+                return redirect('admin_pages:seal_management')
             except Exception as e:
                 logger.exception('启动审批流程失败: %s', str(e))
                 # 审批流程启动失败不影响申请提交
@@ -2879,25 +2880,19 @@ def seal_usage_create(request):
                 usage.usage_date = usage.usage_time.date()
                 usage.save()
             
-            # 启动审批流程
+            # 启动审批流程（使用通用审批服务）
             try:
-                from backend.apps.workflow_engine.models import WorkflowTemplate
-                from backend.apps.workflow_engine.services import ApprovalEngine
+                from backend.apps.administrative_management.services import SealUsageApprovalService
                 
-                # 获取用印申请审批流程
-                workflow = WorkflowTemplate.objects.filter(
-                    code='seal_usage_approval',
-                    status='active'
-                ).first()
+                service = SealUsageApprovalService()
+                approval_instance = service.submit_approval(
+                    obj=usage,
+                    applicant=request.user,
+                    comment=f'申请用印：{usage.seal.seal_name}，用印事由：{usage.usage_reason[:50]}'
+                )
                 
-                if workflow:
-                    # 启动审批流程
-                    approval_instance = ApprovalEngine.start_approval(
-                        workflow=workflow,
-                        content_object=usage,
-                        applicant=request.user,
-                        comment=f'申请用印：{usage.seal.seal_name}，用印事由：{usage.usage_reason[:50]}'
-                    )
+                if approval_instance:
+                    messages.success(request, f'用印申请 {usage.usage_number} 提交成功！审批流程已启动，审批单号：{approval_instance.instance_number}')
                     
                     # 抄送行政主管
                     try:
@@ -2934,11 +2929,12 @@ def seal_usage_create(request):
                     except Exception as e:
                         logger.warning(f'抄送行政主管失败: {str(e)}')
                         # 抄送失败不影响主流程
-                    
-                    messages.success(request, f'用印申请 {usage.usage_number} 提交成功！审批流程已启动，审批单号：{approval_instance.instance_number}')
                 else:
-                    # 如果没有配置审批流程，使用原有的逻辑
-                    messages.success(request, f'用印申请 {usage.usage_number} 提交成功！')
+                    messages.warning(request, f'用印申请 {usage.usage_number} 提交成功，但审批流程未配置，请联系管理员')
+            except ValueError as e:
+                # 验证失败
+                messages.error(request, f'提交审批失败：{str(e)}')
+                return redirect('admin_pages:seal_usage_list')
             except Exception as e:
                 logger.exception('启动审批流程失败: %s', str(e))
                 # 审批流程启动失败不影响申请提交
@@ -7570,6 +7566,12 @@ def loan_list(request):
     search = request.GET.get('search', '')
     status = request.GET.get('status', '')
     applicant_id = request.GET.get('applicant_id', '')
+    loan_type = request.GET.get('loan_type', '')
+    department_id = request.GET.get('department_id', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    amount_min = request.GET.get('amount_min', '')
+    amount_max = request.GET.get('amount_max', '')
     
     # 获取借款申请列表
     try:
@@ -7582,12 +7584,42 @@ def loan_list(request):
             loans = loans.filter(
                 Q(application_number__icontains=search) |
                 Q(loan_reason__icontains=search) |
-                Q(applicant__username__icontains=search)
+                Q(applicant__username__icontains=search) |
+                Q(applicant__first_name__icontains=search) |
+                Q(applicant__last_name__icontains=search)
             )
         if status:
             loans = loans.filter(status=status)
         if applicant_id:
             loans = loans.filter(applicant_id=applicant_id)
+        if loan_type:
+            loans = loans.filter(loan_type=loan_type)
+        if department_id:
+            loans = loans.filter(department_id=department_id)
+        if date_from:
+            try:
+                from_date = datetime.strptime(date_from, '%Y-%m-%d').date()
+                loans = loans.filter(application_date__gte=from_date)
+            except (ValueError, TypeError):
+                pass
+        if date_to:
+            try:
+                to_date = datetime.strptime(date_to, '%Y-%m-%d').date()
+                loans = loans.filter(application_date__lte=to_date)
+            except (ValueError, TypeError):
+                pass
+        if amount_min:
+            try:
+                min_amount = Decimal(amount_min)
+                loans = loans.filter(loan_amount__gte=min_amount)
+            except (ValueError, TypeError, InvalidOperation):
+                pass
+        if amount_max:
+            try:
+                max_amount = Decimal(amount_max)
+                loans = loans.filter(loan_amount__lte=max_amount)
+            except (ValueError, TypeError, InvalidOperation):
+                pass
         
         # 权限检查：普通用户只能看到自己的申请
         # 如果没有 loan.manage 权限，则只显示自己的申请
@@ -7654,6 +7686,21 @@ def loan_list(request):
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
+    # 获取部门列表和用户列表（用于筛选下拉框）（P0-3: 部门按当前用户公司过滤）
+    try:
+        departments = Department.objects.filter(is_active=True).order_by('name')
+        if getattr(request.user, 'company_id', None):
+            departments = departments.filter(company_id=request.user.company_id)
+        # 如果有管理权限，显示所有用户；否则只显示当前用户
+        if _permission_granted('administrative_management.loan.manage', permission_codes):
+            users = User.objects.filter(is_active=True).order_by('username')
+        else:
+            users = User.objects.filter(id=request.user.id)
+    except Exception as e:
+        logger.exception('获取部门或用户列表失败: %s', str(e))
+        departments = Department.objects.none()
+        users = User.objects.none()
+    
     context = _context(
         "借款管理",
         "💰",
@@ -7667,7 +7714,16 @@ def loan_list(request):
         'search': search,
         'status': status,
         'applicant_id': applicant_id,
+        'loan_type': loan_type,
+        'department_id': department_id,
+        'date_from': date_from,
+        'date_to': date_to,
+        'amount_min': amount_min,
+        'amount_max': amount_max,
         'status_choices': LoanApplication.STATUS_CHOICES,
+        'loan_type_choices': LoanApplication.LOAN_TYPE_CHOICES,
+        'departments': departments,
+        'users': users,
         'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/loan_list.html", context)
@@ -7698,29 +7754,25 @@ def loan_create(request):
             loan.status = 'pending_approval'  # 设置为待审批状态
             loan.save()
             
-            # 启动审批流程
+            # 启动审批流程（使用通用审批服务）
             try:
-                from backend.apps.workflow_engine.models import WorkflowTemplate
-                from backend.apps.workflow_engine.services import ApprovalEngine
+                from backend.apps.administrative_management.services import LoanApprovalService
                 
-                # 获取借款申请审批流程
-                workflow = WorkflowTemplate.objects.filter(
-                    code='loan_approval',
-                    status='active'
-                ).first()
+                service = LoanApprovalService()
+                approval_instance = service.submit_approval(
+                    obj=loan,
+                    applicant=request.user,
+                    comment=f'借款申请：{loan.application_number}，借款金额：¥{loan.loan_amount}，借款类型：{loan.get_loan_type_display()}'
+                )
                 
-                if workflow:
-                    # 启动审批流程
-                    approval_instance = ApprovalEngine.start_approval(
-                        workflow=workflow,
-                        content_object=loan,
-                        applicant=request.user,
-                        comment=f'借款申请：{loan.application_number}，借款金额：¥{loan.loan_amount}，借款类型：{loan.get_loan_type_display()}'
-                    )
+                if approval_instance:
                     messages.success(request, f'借款申请 {loan.application_number} 提交成功！审批流程已启动，审批单号：{approval_instance.instance_number}')
                 else:
-                    # 如果没有配置审批流程，使用原有的逻辑
-                    messages.success(request, f'借款申请 {loan.application_number} 创建成功！')
+                    messages.warning(request, f'借款申请 {loan.application_number} 创建成功，但审批流程未配置，请联系管理员')
+            except ValueError as e:
+                # 验证失败
+                messages.error(request, f'提交审批失败：{str(e)}')
+                return redirect('admin_pages:loan_list')
             except Exception as e:
                 logger.exception('启动审批流程失败: %s', str(e))
                 # 审批流程启动失败不影响申请提交

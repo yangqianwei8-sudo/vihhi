@@ -10,6 +10,7 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/document/file-category-manage.css' %}">
 <style>
 .list-page-container {
     padding: 12px !important;
@@ -101,7 +102,7 @@
         <div class="card-body">
             <form method="get" class="d-flex gap-2 align-items-center">
                 <label class="form-label mb-0">选择阶段：</label>
-                <select name="stage" class="form-select form-select-sm" style="width: 200px;" onchange="this.form.submit()">
+                <select name="stage" class="form-select form-select-sm fcm-w-200" data-action="submit-parent-form">
                     <option value="all" {% if show_all %}selected{% endif %}>全部</option>
                     {% for code, name in stages.items %}
                         <option value="{{ code }}" {% if code == stage_code and not show_all %}selected{% endif %}>{{ name }}</option>
@@ -130,7 +131,7 @@
                        placeholder="分类名称、代码、描述..."
                        value="{{ search_keyword }}">
             </div>
-            <div style="width: 150px;">
+            <div class="fcm-w-150">
                 <label class="form-label small mb-1">状态</label>
                 <select name="status" class="form-select form-select-sm">
                     <option value="">全部</option>
@@ -154,14 +155,14 @@
             <table class="table table-hover table-bordered">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 5%;">#</th>
-                        <th style="width: 20%;">分类名称</th>
-                        <th style="width: 15%;">分类代码</th>
-                        <th style="width: 30%;">描述</th>
-                        <th style="width: 8%;">排序</th>
-                        <th style="width: 8%;">状态</th>
-                        <th style="width: 10%;">创建时间</th>
-                        <th style="width: 4%;">操作</th>
+                        <th class="fcm-th-5">#</th>
+                        <th class="fcm-th-20">分类名称</th>
+                        <th class="fcm-th-15">分类代码</th>
+                        <th class="fcm-th-30">描述</th>
+                        <th class="fcm-th-8">排序</th>
+                        <th class="fcm-th-8">状态</th>
+                        <th class="fcm-th-10">创建时间</th>
+                        <th class="fcm-th-4">操作</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -337,25 +338,8 @@
     </div>
 </div>
 
-<script>
-// 弹窗关闭时重置表单
-document.getElementById('createCategoryModal').addEventListener('hidden.bs.modal', function () {
-    document.getElementById('createCategoryForm').reset();
-    // 恢复默认选中当前阶段（如果不是"全部"）
-    {% if not show_all %}
-    document.getElementById('modal_name').value = '{{ stage_code }}';
-    {% else %}
-    document.getElementById('modal_name').value = '';
-    {% endif %}
-    document.getElementById('modal_is_active').checked = true;
-});
-
-// 弹窗打开时设置默认阶段
-document.getElementById('createCategoryModal').addEventListener('show.bs.modal', function () {
-    {% if not show_all %}
-    document.getElementById('modal_name').value = '{{ stage_code }}';
-    {% endif %}
-});
-</script>
+<script type="application/json" id="fileCategoryManageConfig">
+{"showAll": {{ show_all|yesno:"true,false" }}, "stageCode": "{{ stage_code|default:'' }}"}</script>
+<script src="{% static 'js/document/file-category-manage.js' %}"></script>
 {% endif %}
 {% endblock %}

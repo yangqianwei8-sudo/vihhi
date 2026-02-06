@@ -9,16 +9,15 @@ urlpatterns = [
     path('', RedirectView.as_view(url='home/', permanent=False), name='workflow_home'),
     path('home/', views_pages.workflow_home, name='workflow_home_alt'),
     
-    # 流程模板管理
-    path('workflows/', views_pages.workflow_list, name='workflow_list'),
-    path('workflows/create/', views_pages.workflow_create, name='workflow_create'),
-    path('workflows/<int:workflow_id>/', views_pages.workflow_detail, name='workflow_detail'),
-    path('workflows/<int:workflow_id>/edit/', views_pages.workflow_edit, name='workflow_edit'),
-    
-    # 节点管理
-    path('workflows/<int:workflow_id>/nodes/create/', views_pages.node_create, name='node_create'),
-    path('nodes/<int:node_id>/edit/', views_pages.node_edit, name='node_edit'),
-    path('nodes/<int:node_id>/delete/', views_pages.node_delete, name='node_delete'),
+    # G1-5: 流程模板管理已移除，仅允许在 Django Admin 中维护
+    # 以下路由已禁用，返回 403 Forbidden
+    path('workflows/', views_pages.workflow_list_disabled, name='workflow_list'),
+    path('workflows/create/', views_pages.workflow_create_disabled, name='workflow_create'),
+    path('workflows/<int:workflow_id>/', views_pages.workflow_detail_disabled, name='workflow_detail'),
+    path('workflows/<int:workflow_id>/edit/', views_pages.workflow_edit_disabled, name='workflow_edit'),
+    path('workflows/<int:workflow_id>/nodes/create/', views_pages.node_create_disabled, name='node_create'),
+    path('nodes/<int:node_id>/edit/', views_pages.node_edit_disabled, name='node_edit'),
+    path('nodes/<int:node_id>/delete/', views_pages.node_delete_disabled, name='node_delete'),
     
     # 审批操作（一分为三：待我审批、历史审批、我的申请）
     path('approvals/', RedirectView.as_view(pattern_name='workflow_engine:approval_list_pending', permanent=False), name='approval_list'),

@@ -3,160 +3,186 @@
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-{% endblock %}
+{% block detail_title %}线索详情 - {{ lead.company_name }}{% endblock %}
+{% block detail_subtitle %}查看线索 {{ lead.company_name }} 的详细信息{% endblock %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'customer_pages:customer_list' %}">客户管理</a></li>
-<li class="breadcrumb-item"><a href="{% url 'customer_pages:customer_lead_list' %}">客户线索</a></li>
-<li class="breadcrumb-item active" aria-current="page">{{ lead.company_name }}</li>
-{% endblock %}
+{% block detail_edit_url %}{% url 'customer_pages:customer_lead_edit' lead.id %}{% endblock %}
+{% block detail_delete_url %}{% url 'customer_pages:customer_lead_delete' lead.id %}{% endblock %}
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div class="btn-group">
-        {% if not lead.responsible_user %}
-        <a href="{% url 'customer_pages:customer_lead_claim' lead.id %}" class="btn btn-success">认领线索</a>
-        {% endif %}
-        {% if can_edit %}
-        <a href="{% url 'customer_pages:customer_lead_edit' lead.id %}" class="btn btn-primary">编辑线索</a>
-        {% endif %}
-        {% if not lead.converted_client and can_edit %}
-        <form method="post" action="{% url 'customer_pages:customer_lead_convert' lead.id %}" style="display: inline;" onsubmit="return confirm('确认将此线索转化为客户？');">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-warning">转化为客户</button>
-        </form>
-        {% endif %}
+{% block detail_submit_approval %}{% endblock %}
+
+{% block detail_other_actions_header %}
+{% if show_first_visit_button %}
+<a href="{% url 'customer_pages:first_visit_create' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-map-marker-alt"></i> 首次拜访</a>
+{% endif %}
+{% if not lead.responsible_user %}
+<a href="{% url 'customer_pages:customer_lead_claim' lead.id %}" class="btn btn-success btn-sm"><i class="fas fa-user-check"></i> 认领线索</a>
+{% endif %}
+{% if not lead.converted_client and can_edit %}
+<form method="post" action="{% url 'customer_pages:customer_lead_convert' lead.id %}" class="d-inline" onsubmit="return confirm('确认将此线索转化为客户？');">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-warning btn-sm">转化为客户</button>
+</form>
+{% if lead.follow_status != 'lost' %}
+<form method="post" action="{% url 'customer_pages:customer_lead_mark_lost' lead.id %}" class="d-inline" onsubmit="return confirm('确认将此线索标记为无效（已流失）？将不会转化为客户。');">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-outline-secondary btn-sm">标记为无效</button>
+</form>
+{% endif %}
+{% endif %}
+<a href="{% url 'customer_pages:customer_lead_list' %}" class="btn btn-outline-secondary btn-sm">返回列表</a>
+{% endblock detail_other_actions_header %}
+
+{% block detail_basic_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-basic-info">
+  <div class="detail-card detail-card-basic-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-info-circle"></i>
+        基本信息
+      </h3>
     </div>
-    <a href="{% url 'customer_pages:customer_lead_list' %}" class="btn btn-outline-secondary">返回列表</a>
-</div>
-
-<div class="info-card">
-    <div class="info-card-header">
-        <h5 class="info-card-title">基本信息</h5>
-        {% if lead.converted_client %}
-        <a href="{% url 'customer_pages:customer_detail' client_id=lead.converted_client.id %}" class="btn btn-sm btn-outline-success">查看已转化客户</a>
-        {% endif %}
-    </div>
-    <div class="info-card-body">
-        <div class="info-grid">
-            <div class="info-item">
-                <span class="info-label">公司名称</span>
-                <span class="info-value">{{ lead.company_name }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">联系人</span>
-                <span class="info-value">{{ lead.contact_name|default:"—" }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">联系电话</span>
-                <span class="info-value">{{ lead.contact_phone|default:"—" }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">联系邮箱</span>
-                <span class="info-value">{{ lead.contact_email|default:"—" }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">地区</span>
-                <span class="info-value">{% if lead.province or lead.city or lead.district %}{{ lead.province|default:"" }}{{ lead.city|default:"" }}{{ lead.district|default:"" }}{% else %}—{% endif %}</span>
-            </div>
+    <div class="detail-card-body">
+      <div class="row mb-3">
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">公司名称</label>
+            <div class="detail-field-value">{{ lead.company_name }}</div>
+          </div>
         </div>
-    </div>
-</div>
-
-<div class="info-card">
-    <div class="info-card-header">
-        <h5 class="info-card-title">线索信息</h5>
-    </div>
-    <div class="info-card-body">
-        <div class="info-grid">
-            <div class="info-item">
-                <span class="info-label">线索来源</span>
-                <span class="info-value">{{ lead.get_lead_source_display }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">渠道</span>
-                <span class="info-value">{{ lead.channel|default:"—" }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">跟进状态</span>
-                <span class="info-value">
-                    <span class="status-badge {{ lead.follow_status }}">
-                        {{ lead.get_follow_status_display }}
-                    </span>
-                </span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">负责人</span>
-                <span class="info-value">{{ lead.responsible_user.get_full_name|default:lead.responsible_user.username|default:"未分配" }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">是否已加好友</span>
-                <span class="info-value">
-                    {% if lead.is_friend_added %}
-                    <span class="badge bg-success">是</span>
-                    {% else %}
-                    <span class="badge bg-secondary">否</span>
-                    {% endif %}
-                </span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">未跟进天数</span>
-                <span class="info-value">
-                    {% if lead.days_not_followed > 0 %}
-                    <span class="badge bg-{% if lead.days_not_followed > 300 %}danger{% elif lead.days_not_followed > 100 %}warning{% else %}success{% endif %}">
-                        {{ lead.days_not_followed }} 天
-                    </span>
-                    {% else %}
-                    <span class="text-muted">—</span>
-                    {% endif %}
-                </span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">实际跟进时间</span>
-                <span class="info-value">{{ lead.actual_followup_time|date:"Y-m-d H:i"|default:"—" }}</span>
-            </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">联系人</label>
+            <div class="detail-field-value">{{ lead.contact_name|default:"—" }}</div>
+          </div>
         </div>
-    </div>
-</div>
-
-<div class="info-card">
-    <div class="info-card-header">
-        <h5 class="info-card-title">最新跟进记录</h5>
-    </div>
-    <div class="info-card-body">
-        {% if lead.actual_followup_time %}
-        <p class="text-muted small mb-2">跟进时间：{{ lead.actual_followup_time|date:"Y-m-d H:i" }}</p>
-        {% endif %}
-        {% if lead.latest_followup_note %}
-        <p class="mb-0">{{ lead.latest_followup_note|linebreaks }}</p>
-        {% elif not lead.actual_followup_time %}
-        <p class="text-muted mb-0">暂无跟进记录，可在编辑时更新</p>
-        {% endif %}
-    </div>
-</div>
-
-<div class="info-card">
-    <div class="info-card-header">
-        <h5 class="info-card-title">创建信息</h5>
-    </div>
-    <div class="info-card-body">
-        <div class="info-grid">
-            <div class="info-item">
-                <span class="info-label">创建人</span>
-                <span class="info-value">{{ lead.created_by.get_full_name|default:lead.created_by.username }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">创建时间</span>
-                <span class="info-value">{{ lead.created_time|date:"Y-m-d H:i" }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">更新时间</span>
-                <span class="info-value">{{ lead.updated_time|date:"Y-m-d H:i" }}</span>
-            </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">联系电话</label>
+            <div class="detail-field-value">{{ lead.contact_phone|default:"—" }}</div>
+          </div>
         </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">联系邮箱</label>
+            <div class="detail-field-value">{{ lead.contact_email|default:"—" }}</div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">地区</label>
+            <div class="detail-field-value">{% if lead.province or lead.city or lead.district %}{{ lead.province|default:"" }}{{ lead.city|default:"" }}{{ lead.district|default:"" }}{% else %}—{% endif %}</div>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
+{% endblock detail_basic_info_card %}
 
-{% endblock %}
+{% block detail_detail_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-detail-info">
+  <div class="detail-card detail-card-detail-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-list-alt"></i>
+        线索信息
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      <div class="row mb-3">
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">线索来源</label>
+            <div class="detail-field-value">{{ lead.get_lead_source_display }}</div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">渠道</label>
+            <div class="detail-field-value">{{ lead.channel|default:"—" }}</div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">跟进状态</label>
+            <div class="detail-field-value">
+              <span class="status-badge {{ lead.follow_status }}">
+                {{ lead.get_follow_status_display }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">负责人</label>
+            <div class="detail-field-value">{{ lead.responsible_user.get_full_name|default:lead.responsible_user.username|default:"未分配" }}</div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">是否已加好友</label>
+            <div class="detail-field-value">
+              {% if lead.is_friend_added %}
+              <span class="badge bg-success">是</span>
+              {% else %}
+              <span class="badge bg-secondary">否</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">未跟进天数</label>
+            <div class="detail-field-value">
+              {% if lead.days_not_followed > 0 %}
+              <span class="badge bg-{% if lead.days_not_followed > 300 %}danger{% elif lead.days_not_followed > 100 %}warning{% else %}success{% endif %}">
+                {{ lead.days_not_followed }} 天
+              </span>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">实际跟进时间</label>
+            <div class="detail-field-value">{{ lead.actual_followup_time|date:"Y-m-d H:i"|default:"—" }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock detail_detail_info_card %}
+
+{% block detail_status_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-status-info">
+  <div class="detail-card detail-card-status-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-comment-dots"></i>
+        最新跟进记录
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      {% if lead.actual_followup_time %}
+      <p class="text-muted small mb-2">跟进时间：{{ lead.actual_followup_time|date:"Y-m-d H:i" }}</p>
+      {% endif %}
+      {% if lead.latest_followup_note %}
+      <p class="mb-0">{{ lead.latest_followup_note|linebreaks }}</p>
+      {% elif not lead.actual_followup_time %}
+      <p class="text-muted mb-0">暂无跟进记录，可在编辑时更新</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock detail_status_info_card %}
+
+{% block detail_related_info_card %}{% endblock %}
+{% block detail_audit_info_card %}{% endblock %}
+{% block detail_approval_info_card %}{% endblock %}
+{% block detail_data_info_card %}{% endblock %}
+{% block detail_statistics_card %}{% endblock %}
+{% block detail_attachments_card %}{% endblock %}

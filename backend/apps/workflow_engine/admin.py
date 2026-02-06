@@ -3,7 +3,8 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.db import models
 from django import forms
-from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalNode, ApprovalInstance, ApprovalRecord
+from django.core.exceptions import ValidationError
+from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalNode, ApprovalInstance, ApprovalRecord, WorkflowBinding
 from backend.apps.workflow_engine.constants import APPLICABLE_MODEL_CHOICES, MODEL_FORM_MAP
 from backend.core.admin_base import BaseModelAdmin, AuditAdminMixin
 
@@ -150,7 +151,13 @@ class ApprovalNodeAdmin(BaseModelAdmin):
             'fields': ('workflow', 'name', 'node_type', 'sequence', 'description')
         }),
         ('审批人配置', {
-            'fields': ('approver_type', 'approver_users', 'approver_roles', 'approver_departments', 'approval_mode')
+            'fields': ('approver_type', 'approver_config', 'approver_roles', 'approver_departments', 'approval_mode'),
+            'description': format_html(
+                '<p><strong>配置说明：</strong></p>'
+                '<p>审批人类型必须使用配置化类型（role/department/department_manager/creator/creator_manager/creator_manager_chain），'
+                '以支持组织变化自动适配。</p>'
+                '<p style="color: #d32f2f;">禁止使用"指定用户"类型（已废弃），该类型写死用户ID，无法适应组织变化。</p>'
+            )
         }),
         ('节点配置', {
             'fields': ('is_required', 'can_reject', 'can_transfer', 'timeout_hours')
@@ -160,6 +167,39 @@ class ApprovalNodeAdmin(BaseModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    
+    def get_form(self, request, obj=None, **kwargs):
+        """自定义表单，限制审批人类型选择（禁止user/custom）"""
+        form = super().get_form(request, obj, **kwargs)
+        
+        # 限制 approver_type 字段只能选择配置化类型
+        if 'approver_type' in form.base_fields:
+            from backend.apps.workflow_engine.models import ApprovalNode
+            # 只显示配置化的审批人类型（移除user和custom）
+            allowed_choices = [
+                choice for choice in ApprovalNode.APPROVER_TYPE_CHOICES
+                if choice[0] not in ['user', 'custom']
+            ]
+            form.base_fields['approver_type'].choices = allowed_choices
+            form.base_fields['approver_type'].help_text = format_html(
+                '选择审批人类型。所有类型均支持组织变化自动适配，无需修改流程模板。<br>'
+                '<small style="color: #d32f2f;">注意："指定用户"和"自定义规则"类型已废弃，禁止使用。</small>'
+            )
+        
+        # 隐藏 approver_users 字段（已废弃，不再使用）
+        if 'approver_users' in form.base_fields:
+            form.base_fields['approver_users'].widget = forms.HiddenInput()
+            form.base_fields['approver_users'].required = False
+        
+        # 为 approver_config 添加帮助文本
+        if 'approver_config' in form.base_fields:
+            form.base_fields['approver_config'].help_text = format_html(
+                'JSON格式的审批人规则配置参数。例如：<br>'
+                '<code>{"levels": 2}</code> - 用于 creator_manager_chain 类型，表示向上追溯2级上级<br>'
+                '<small style="color: #666;">其他类型通常不需要配置此字段</small>'
+            )
+        
+        return form
 
 
 @admin.register(ApprovalInstance)
@@ -522,6 +562,258 @@ class ApprovalInstanceAdmin(BaseModelAdmin):
                 count += 1
         # 审批结果走通知中心，不写入 success messages
     reject_selected.short_description = '批量审批驳回'
+
+
+# 业务流程选择表单（将在 WorkflowBindingAdmin 中动态设置 model）
+def create_workflow_binding_form(model_class):
+    """创建 WorkflowBinding 自定义表单：用户选择业务流程，系统自动映射到 content_type 和 action"""
+    
+    class WorkflowBindingForm(forms.ModelForm):
+        """WorkflowBinding 自定义表单：用户选择业务流程，系统自动映射到 content_type 和 action"""
+        
+        # 业务流程选择字段（仅用于 Admin，不保存到数据库）
+        business_workflow = forms.ChoiceField(
+            label='业务流程',
+            required=True,
+            help_text='选择要配置的业务流程。系统将自动设置对应的业务对象类型和操作类型。',
+            choices=[
+                ('', '---------'),
+                ('loanapplication_submit', '借款申请审批'),
+                ('sealusage_submit', '用印申请审批'),
+                ('sealborrowing_submit', '印章借用审批'),
+                ('businessopportunity_submit', '商机创建审批'),
+                ('plan_start', '计划启动审批'),
+                ('plan_cancel', '计划取消审批'),
+            ]
+        )
+        
+        # 业务流程到 (model, action) 的反向映射
+        WORKFLOW_TO_MODEL_ACTION = {
+            'loanapplication_submit': ('loanapplication', 'submit'),
+            'sealusage_submit': ('sealusage', 'submit'),
+            'sealborrowing_submit': ('sealborrowing', 'submit'),
+            'businessopportunity_submit': ('businessopportunity', 'submit'),
+            'plan_start': ('plan', 'start'),
+            'plan_cancel': ('plan', 'cancel'),
+        }
+        
+        class Meta:
+            model = model_class
+            fields = '__all__'
+        
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            
+            # 如果是编辑已有对象，根据 content_type 和 action 反向映射到业务流程
+            if self.instance and self.instance.pk:
+                model = self.instance.content_type.model if self.instance.content_type else None
+                action = self.instance.action if hasattr(self.instance, 'action') else None
+                
+                if model and action:
+                    # 反向查找业务流程
+                    workflow_key = None
+                    for key, (m, a) in self.WORKFLOW_TO_MODEL_ACTION.items():
+                        if m == model and a == action:
+                            workflow_key = key
+                            break
+                    
+                    if workflow_key:
+                        self.fields['business_workflow'].initial = workflow_key
+            
+            # 将 content_type 和 action 从 fieldsets 中移除，改为只读显示
+            # 这些字段仍然需要存在，但用户不能直接编辑
+            if 'content_type' in self.fields:
+                self.fields['content_type'].widget = forms.HiddenInput()
+                self.fields['content_type'].required = False
+            
+            if 'action' in self.fields:
+                self.fields['action'].widget = forms.HiddenInput()
+                self.fields['action'].required = False
+        
+        def clean(self):
+            cleaned_data = super().clean()
+            
+            # 根据选择的业务流程自动设置 content_type 和 action
+            business_workflow = cleaned_data.get('business_workflow')
+            if business_workflow:
+                model_action = self.WORKFLOW_TO_MODEL_ACTION.get(business_workflow)
+                if model_action:
+                    model, action = model_action
+                    
+                    # 设置 content_type
+                    try:
+                        content_type = ContentType.objects.get(model=model)
+                        cleaned_data['content_type'] = content_type
+                        self.instance.content_type = content_type
+                    except ContentType.DoesNotExist:
+                        raise ValidationError({'business_workflow': f'业务对象类型 {model} 不存在，请联系系统管理员。'})
+                    
+                    # 设置 action
+                    cleaned_data['action'] = action
+                    self.instance.action = action
+                else:
+                    raise ValidationError({'business_workflow': '无效的业务流程选择。'})
+            else:
+                # 新建时必须选择业务流程
+                if not self.instance.pk:
+                    raise ValidationError({'business_workflow': '请选择业务流程。'})
+            
+            return cleaned_data
+    
+    return WorkflowBindingForm
+
+
+@admin.register(WorkflowBinding)
+class WorkflowBindingAdmin(AuditAdminMixin, BaseModelAdmin):
+    """流程模板绑定配置管理"""
+    list_display = ('business_workflow_display', 'workflow_template', 'priority', 'is_active', 'created_by', 'created_time')
+    list_filter = ('is_active', 'action', 'content_type', 'created_time')
+    search_fields = ('note', 'workflow_template__name', 'workflow_template__code', 'content_type__model')
+    readonly_fields = ('created_time', 'updated_time', 'content_type_readonly', 'action_readonly')
+    raw_id_fields = ['workflow_template', 'created_by', 'updated_by']
+    
+    # 业务对象类型映射表（model -> 中文名）
+    BUSINESS_OBJECT_NAMES = {
+        'loanapplication': '借款申请',
+        'sealusage': '用印申请',
+        'sealborrowing': '印章借用',
+        'businessopportunity': '商机',
+        'plan': '计划',
+    }
+    
+    # 业务流程名称映射表（(model, action) -> 业务流程名称）
+    BUSINESS_WORKFLOW_NAMES = {
+        ('loanapplication', 'submit'): '借款申请审批',
+        ('sealusage', 'submit'): '用印申请审批',
+        ('sealborrowing', 'submit'): '印章借用审批',
+        ('businessopportunity', 'submit'): '商机创建审批',
+        ('plan', 'start'): '计划启动审批',
+        ('plan', 'cancel'): '计划取消审批',
+    }
+    
+    # 允许参与审批模板绑定的业务对象类型
+    ALLOWED_CONTENT_TYPES = list(BUSINESS_OBJECT_NAMES.keys())
+    
+    fieldsets = (
+        ('绑定配置', {
+            'fields': ('business_workflow', 'content_type_readonly', 'action_readonly', 'workflow_template', 'priority', 'is_active'),
+            'description': format_html(
+                '<p><strong>配置说明：</strong></p>'
+                '<p>此配置用于指定"业务流程"应使用哪个"审批流程模板"。</p>'
+                '<p>例如：选择"商机创建审批"，然后选择对应的"商机审批流程模板"。</p>'
+                '<p style="color: #666; margin-top: 10px;">系统将根据您选择的业务流程自动设置业务对象类型和操作类型，无需手动选择。</p>'
+            )
+        }),
+        ('备注信息', {
+            'fields': ('note',)
+        }),
+        ('审计信息', {
+            'fields': ('created_by', 'updated_by')
+        }),
+        # 时间信息会自动添加
+    )
+    
+    def get_form(self, request, obj=None, **kwargs):
+        """自定义表单，使用业务流程选择表单"""
+        # 动态创建表单类
+        WorkflowBindingForm = create_workflow_binding_form(self.model)
+        kwargs['form'] = WorkflowBindingForm
+        return super().get_form(request, obj, **kwargs)
+    
+    def content_type_readonly(self, obj):
+        """显示业务对象类型（只读，由业务流程自动设置）"""
+        # 对于新建对象，obj 可能还没有 content_type，但表单的 clean 方法会设置它
+        # 这里我们检查 obj 是否有 content_type，或者检查表单数据
+        if obj and obj.content_type:
+            model = obj.content_type.model
+            chinese_name = self.BUSINESS_OBJECT_NAMES.get(model, model)
+            return format_html(
+                '<div style="padding: 10px; background-color: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px; margin: 5px 0;">'
+                '<strong style="color: #2e7d32;">{}（{}）</strong>'
+                '<br><small style="color: #666;">此值由选择的业务流程自动设置</small>'
+                '</div>',
+                chinese_name, model
+            )
+        # 新建对象或未设置时显示提示
+        return format_html(
+            '<div style="padding: 10px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; margin: 5px 0;">'
+            '<strong style="color: #856404;">提示：</strong>'
+            '<p style="margin: 5px 0 0 0; color: #856404;">选择"业务流程"后，系统将自动设置此字段。</p>'
+            '<p style="margin: 5px 0 0 0; color: #856404; font-size: 0.9em;">例如：选择"商机创建审批" → 自动设置为"商机（businessopportunity）"</p>'
+            '</div>'
+        )
+    content_type_readonly.short_description = '业务对象类型（自动设置）'
+    
+    def action_readonly(self, obj):
+        """显示操作类型（只读，由业务流程自动设置）"""
+        if obj and hasattr(obj, 'action') and obj.action:
+            action_display = obj.get_action_display() if hasattr(obj, 'get_action_display') else obj.action
+            return format_html(
+                '<div style="padding: 10px; background-color: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px; margin: 5px 0;">'
+                '<strong style="color: #2e7d32;">{}</strong>'
+                '<br><small style="color: #666;">此值由选择的业务流程自动设置</small>'
+                '</div>',
+                action_display
+            )
+        # 新建对象或未设置时显示提示
+        return format_html(
+            '<div style="padding: 10px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; margin: 5px 0;">'
+            '<strong style="color: #856404;">提示：</strong>'
+            '<p style="margin: 5px 0 0 0; color: #856404;">选择"业务流程"后，系统将自动设置此字段。</p>'
+            '<p style="margin: 5px 0 0 0; color: #856404; font-size: 0.9em;">例如：选择"商机创建审批" → 自动设置为"提交审批（submit）"</p>'
+            '</div>'
+        )
+    action_readonly.short_description = '操作类型（自动设置）'
+    
+    def business_workflow_display(self, obj):
+        """显示业务流程名称（列表页）"""
+        if obj.content_type and obj.action:
+            model = obj.content_type.model
+            action = obj.action
+            # 从映射表获取业务流程名称
+            workflow_name = self.BUSINESS_WORKFLOW_NAMES.get((model, action))
+            if workflow_name:
+                return workflow_name
+            # 如果映射表中没有，则组合显示
+            chinese_name = self.BUSINESS_OBJECT_NAMES.get(model, model)
+            action_display = obj.get_action_display()
+            return f"{chinese_name} - {action_display}"
+        return '-'
+    business_workflow_display.short_description = '业务流程'
+    
+    
+    def content_type_display(self, obj):
+        """显示业务对象类型（列表页，已废弃，保留用于兼容）"""
+        if obj.content_type:
+            model = obj.content_type.model
+            chinese_name = self.BUSINESS_OBJECT_NAMES.get(model, model)
+            return f"{chinese_name}（{model}）"
+        return '-'
+    content_type_display.short_description = '业务对象类型'
+    
+    def action_display(self, obj):
+        """显示操作类型（列表页，已废弃，保留用于兼容）"""
+        return obj.get_action_display()
+    action_display.short_description = '操作类型'
+    
+    def save_model(self, request, obj, form, change):
+        """保存时记录操作人"""
+        if change:
+            obj.updated_by = request.user
+        else:
+            obj.created_by = request.user
+        
+        # 执行模型验证（包括唯一生效规则）
+        try:
+            obj.full_clean()
+        except ValidationError as e:
+            from django.contrib import messages
+            for field, errors in e.error_dict.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+            raise
+        
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(ApprovalRecord)

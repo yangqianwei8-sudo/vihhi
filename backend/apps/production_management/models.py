@@ -1137,3 +1137,33 @@ class ProjectArchive(models.Model):
         super().save(*args, **kwargs)
 
 
+class Goal(models.Model):
+    """目标模型（精简版，只服务于目标→行动）"""
+    STATUS_CHOICES = [
+        ('not_started', '未开始'),
+        ('in_progress', '进行中'),
+        ('completed', '已完成'),
+        ('terminated', '已终止'),
+    ]
+    
+    title = models.CharField(max_length=200, verbose_name='目标名称')
+    owner = models.ForeignKey(User, on_delete=models.PROTECT, related_name='production_owned_goals', verbose_name='归属人')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_started', verbose_name='状态')
+    start_date = models.DateField(null=True, blank=True, verbose_name='开始日期')
+    end_date = models.DateField(null=True, blank=True, verbose_name='结束日期')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='production_created_goals', verbose_name='创建人')
+    created_at = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    
+    class Meta:
+        db_table = 'production_management_goal'
+        verbose_name = '目标'
+        verbose_name_plural = verbose_name
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['owner', 'status']),
+            models.Index(fields=['created_by']),
+        ]
+    
+    def __str__(self):
+        return self.title
+

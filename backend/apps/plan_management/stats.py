@@ -64,7 +64,8 @@ def goal_stats(user, params: dict):
     spec = ListFilterSpec.from_params(params, allow_overdue=False)
     
     qs = StrategicGoal.objects.all()
-    qs = apply_company_scope(qs, user)  # 公司隔离
+    from backend.apps.plan_management.utils import apply_goal_company_scope
+    qs = apply_goal_company_scope(qs, user)  # 目标按部门公司隔离（无 company 字段）
     qs = apply_range(qs, "created_time", spec.range)
     qs = apply_mine_participating(qs, user, spec.mine, spec.participating,
                                    responsible_field="responsible_person", participants_field="participants")

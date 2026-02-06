@@ -151,22 +151,12 @@ def plan_list(request):
     can_manage = _permission_granted('plan_management.plan.manage', permission_set)
     plan_ids = [p.id for p in page_obj]
     
-    # 批量获取待审批决策（PlanDecision，向后兼容）
-    pending_decisions = PlanDecision.objects.filter(
-        plan_id__in=plan_ids, 
-        decided_at__isnull=True
-    )
-    pending_decision_plan_ids = set(pending_decisions.values_list('plan_id', flat=True))
-    
-    # 批量获取待审批启动决策的计划ID
-    pending_start_decision_plan_ids = set(
-        pending_decisions.filter(request_type='start').values_list('plan_id', flat=True)
-    )
-    
-    # 批量获取待审批取消决策的计划ID
-    pending_cancel_decision_plan_ids = set(
-        pending_decisions.filter(request_type='cancel').values_list('plan_id', flat=True)
-    )
+    # G1-4: PlanDecision 已退场，不再作为待办或审批来源
+    # 所有待审批统一使用 ApprovalInstance（审批引擎）
+    # 历史 PlanDecision 数据保留为只读，不在此处查询
+    pending_decision_plan_ids = set()
+    pending_start_decision_plan_ids = set()
+    pending_cancel_decision_plan_ids = set()
     
     # 批量获取待审批审批实例（审批引擎）
     from django.contrib.contenttypes.models import ContentType
@@ -211,9 +201,9 @@ def plan_list(request):
         has_pending_start_decision = plan.id in pending_start_decision_plan_ids
         has_pending_cancel_decision = plan.id in pending_cancel_decision_plan_ids
         
-        # 合并结果：任一方式有 pending 都算有 pending（与详情页逻辑一致）
-        has_pending_start = has_pending_start_approval or has_pending_start_decision
-        has_pending_cancel = has_pending_cancel_approval or has_pending_cancel_decision
+        # G1-4: PlanDecision 已退场，仅使用 ApprovalInstance 判断
+        has_pending_start = has_pending_start_approval
+        has_pending_cancel = has_pending_cancel_approval
         
         plan.can_edit = (
             (plan.responsible_person == request.user or can_manage) and 
@@ -1148,13 +1138,10 @@ def plan_detail(request, plan_id):
         status__in=['pending', 'in_progress']
     ).exists()
     
-    # 检查 PlanDecision（向后兼容）
-    has_pending_start_decision = PlanDecision.objects.filter(plan=plan, request_type='start', decided_at__isnull=True).exists()
-    has_pending_cancel_decision = PlanDecision.objects.filter(plan=plan, request_type='cancel', decided_at__isnull=True).exists()
-    
-    # 合并结果（任一方式有 pending 都算有 pending）
-    has_pending_start = has_pending_start_approval or has_pending_start_decision
-    has_pending_cancel = has_pending_cancel_approval or has_pending_cancel_decision
+    # G1-4: PlanDecision 已退场，不再作为待办或审批来源
+    # 所有待审批统一使用 ApprovalInstance（审批引擎）
+    has_pending_start = has_pending_start_approval
+    has_pending_cancel = has_pending_cancel_approval
     
     # 获取待审批的决策列表（用于审批人）
     # 优先显示审批引擎的审批实例
@@ -1164,8 +1151,9 @@ def plan_detail(request, plan_id):
         status__in=['pending', 'in_progress']
     ).order_by('-created_time')
     
-    # 向后兼容：也显示 PlanDecision
-    pending_decisions = PlanDecision.objects.filter(plan=plan, decided_at__isnull=True).order_by('-requested_at')
+    # G1-4: PlanDecision 已退场，不再作为待办或审批来源
+    # 历史 PlanDecision 数据保留为只读，不在此处查询
+    pending_decisions = PlanDecision.objects.none()
     
     can_approve = _permission_granted('plan_management.approve_plan', permission_set) or request.user.is_superuser
     
@@ -1271,13 +1259,12 @@ def plan_detail(request, plan_id):
             _permission_granted('plan_management.plan.manage', permission_set) and 
             plan.status == 'draft' and
             plan.get_child_plans_count() == 0 and
-            not pending_decisions.exists() and
             not pending_approval_instances.exists()
         ),
         # P1 新增权限
         'can_submit_approval': can_submit_approval,
         'can_request_cancel': can_request_cancel,
-        'pending_decisions': pending_decisions,  # 向后兼容
+        # G1-4: PlanDecision 已退场，不再返回 pending_decisions
         'pending_approval_instances': pending_approval_instances,  # 审批引擎的审批实例
         'current_approval_instance': current_approval_instance,  # 当前用户可以审批的实例（用于三栏布局）
         'all_users': all_users,  # 所有用户列表（用于转交）
@@ -1287,6 +1274,9 @@ def plan_detail(request, plan_id):
         'has_pending_adjustment': has_pending_adjustment,  # 是否已有待审批的调整申请
         # 开始执行权限（计划不再有 accepted 状态，已发布状态可以直接开始执行）
         'can_start_execution': can_start_execution,
+        # 计划分解和跟踪权限（需要 view 权限，且审批状态允许）
+        'can_decompose': _permission_granted('plan_management.view', permission_set) and (not approval_instances or approval_instances[0].status != 'rejected'),
+        'can_track': _permission_granted('plan_management.view', permission_set) and (not approval_instances or approval_instances[0].status != 'rejected'),
     })
     
     # 检查是否使用三栏布局模板（可以通过URL参数或设置控制）
@@ -1303,8 +1293,7 @@ def plan_edit(request, plan_id):
     
     plan = get_plan_or_404(request, plan_id)
     
-    # 检查是否有待审批的决策（提交审批后不能编辑）
-    # 同时检查审批引擎和 PlanDecision
+    # G1-4: PlanDecision 已退场，仅检查审批引擎
     from django.contrib.contenttypes.models import ContentType
     from backend.apps.workflow_engine.models import ApprovalInstance
     from backend.apps.plan_management.services.plan_approval import PlanApprovalService
@@ -1315,8 +1304,7 @@ def plan_edit(request, plan_id):
         object_id=plan.id,
         status__in=['pending', 'in_progress']
     ).exists()
-    has_pending_decision = PlanDecision.objects.filter(plan=plan, decided_at__isnull=True).exists()
-    has_pending_decision = has_pending_approval or has_pending_decision
+    has_pending_decision = has_pending_approval
     
     # 检查是否可以编辑：允许草稿和已取消状态的计划编辑
     # 负责人可以编辑自己负责的草稿计划，或者有管理权限的用户可以编辑
@@ -1753,9 +1741,11 @@ def plan_decompose(request, plan_id):
     # 获取所有用户（用于创建子计划）
     users = User.objects.filter(is_active=True).order_by('username')
     
-    # 获取所有部门（用于创建部门计划）
+    # 获取所有部门（用于创建部门计划）（P0-3: 按当前用户公司过滤）
     departments = Department.objects.filter(is_active=True).order_by('name')
-    
+    if getattr(request.user, 'company_id', None):
+        departments = departments.filter(company_id=request.user.company_id)
+
     # 计算子计划汇总信息
     child_plans_summary = calculate_child_plans_summary(plan)
     
@@ -2876,9 +2866,11 @@ def strategic_goal_decompose(request, goal_id):
     
     goal_tree = get_goal_tree(goal)
     
-    # 获取所有部门（用于创建部门目标）
+    # 获取所有部门（用于创建部门目标）（P0-3: 按当前用户公司过滤）
     departments = Department.objects.filter(is_active=True).order_by('name')
-    
+    if getattr(request.user, 'company_id', None):
+        departments = departments.filter(company_id=request.user.company_id)
+
     # 获取所有用户（用于创建个人目标）
     users = User.objects.filter(is_active=True).order_by('username')
     
@@ -3337,13 +3329,7 @@ def plan_delete(request, plan_id):
             messages.error(request, '该计划有下级计划，无法删除')
             return redirect('plan_pages:plan_detail', plan_id=plan_id)
         
-        # 检查是否有待审批的决策请求（decision为null表示待处理）
-        from backend.apps.plan_management.models import PlanDecision
-        pending_decisions = plan.decisions.filter(decision__isnull=True)
-        if pending_decisions.exists():
-            messages.error(request, '该计划有待审批的请求，无法删除')
-            return redirect('plan_pages:plan_detail', plan_id=plan_id)
-        
+        # G1-4: PlanDecision 已退场，仅检查审批引擎
         # 检查是否有待审批的审批实例（审批引擎）
         from django.contrib.contenttypes.models import ContentType
         from backend.apps.workflow_engine.models import ApprovalInstance
@@ -3406,13 +3392,7 @@ def plan_delete(request, plan_id):
         can_delete = False
         delete_warnings.append('该计划有下级计划，无法删除')
     
-    # 检查是否有待审批的决策请求（decision为null表示待处理）
-    from backend.apps.plan_management.models import PlanDecision
-    pending_decisions = plan.decisions.filter(decision__isnull=True)
-    if pending_decisions.exists():
-        can_delete = False
-        delete_warnings.append('该计划有待审批的请求，无法删除')
-    
+    # G1-4: PlanDecision 已退场，仅检查审批引擎
     # 检查是否有待审批的审批实例（审批引擎）
     from django.contrib.contenttypes.models import ContentType
     from backend.apps.workflow_engine.models import ApprovalInstance
@@ -3487,12 +3467,7 @@ def plan_batch_delete(request):
                 can_delete = False
                 delete_reason.append('该计划有下级计划，无法删除')
             
-            # 检查是否有待审批的决策请求
-            pending_decisions = plan.decisions.filter(decision__isnull=True)
-            if pending_decisions.exists():
-                can_delete = False
-                delete_reason.append('该计划有待审批的请求，无法删除')
-            
+            # G1-4: PlanDecision 已退场，仅检查审批引擎
             # 检查是否有待审批的审批实例
             pending_approval_instances = ApprovalInstance.objects.filter(
                 content_type=plan_content_type,
@@ -4083,7 +4058,7 @@ def plan_request_cancel(request, plan_id):
         messages.error(request, f'只有执行中状态的计划可以申请取消，当前状态：{plan.get_status_display()}')
         return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
-    # 检查是否已存在 pending 的 cancel 请求（同时检查审批引擎和 PlanDecision）
+    # G1-4: PlanDecision 已退场，仅检查审批引擎
     from django.contrib.contenttypes.models import ContentType
     from backend.apps.workflow_engine.models import ApprovalInstance
     from backend.apps.plan_management.services.plan_approval import PlanApprovalService
@@ -4096,13 +4071,7 @@ def plan_request_cancel(request, plan_id):
         status__in=['pending', 'in_progress']
     ).exists()
     
-    existing_pending_decision = PlanDecision.objects.filter(
-        plan=plan,
-        request_type='cancel',
-        decided_at__isnull=True
-    ).exists()
-    
-    if existing_pending_approval or existing_pending_decision:
+    if existing_pending_approval:
         messages.warning(request, '该计划已有待处理的取消请求')
         return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
@@ -4119,10 +4088,11 @@ def plan_request_cancel(request, plan_id):
 
 @login_required
 def decision_approve(request, decision_id):
-    """审批通过决策"""
-    permission_set = get_user_permission_codes(request.user)
-    decision = get_pending_decision_or_404(request, decision_id)
-    plan = decision.plan
+    """审批通过决策（G1-4: PlanDecision 已退场，此功能已禁用）"""
+    # G1-4: PlanDecision 已退场，不再支持通过此接口审批
+    # 所有审批统一使用 WorkflowEngine（审批引擎）
+    messages.error(request, '旧审批系统已退场，请使用审批引擎进行审批')
+    return redirect('plan_pages:plan_list')
     
     # 权限检查：plan_management.approve_plan 或系统管理员
     can_approve = _permission_granted('plan_management.approve_plan', permission_set) or request.user.is_superuser
@@ -4150,10 +4120,11 @@ def decision_approve(request, decision_id):
 
 @login_required
 def decision_reject(request, decision_id):
-    """审批驳回决策"""
-    permission_set = get_user_permission_codes(request.user)
-    decision = get_pending_decision_or_404(request, decision_id)
-    plan = decision.plan
+    """审批驳回决策（G1-4: PlanDecision 已退场，此功能已禁用）"""
+    # G1-4: PlanDecision 已退场，不再支持通过此接口审批
+    # 所有审批统一使用 WorkflowEngine（审批引擎）
+    messages.error(request, '旧审批系统已退场，请使用审批引擎进行审批')
+    return redirect('plan_pages:plan_list')
     
     # 权限检查：plan_management.approve_plan 或系统管理员
     can_reject = _permission_granted('plan_management.approve_plan', permission_set) or request.user.is_superuser

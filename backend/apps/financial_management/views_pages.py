@@ -2380,6 +2380,8 @@ def budget_execution_analysis(request):
     try:
         from backend.apps.system_management.models import Department
         departments = Department.objects.filter(is_active=True).order_by('name')
+        if getattr(request.user, 'company_id', None):
+            departments = departments.filter(company_id=request.user.company_id)
     except Exception:
         departments = []
     

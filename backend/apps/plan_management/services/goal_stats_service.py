@@ -8,6 +8,7 @@ from django.db.models import Count, Q
 from datetime import date, datetime, timedelta
 from typing import Dict, Any
 from ..models import StrategicGoal
+from ..utils import apply_goal_company_scope
 
 
 def get_user_goal_stats(user, filter_department_id=None, filter_responsible_person_id=None, filter_start_date=None, filter_end_date=None) -> Dict[str, Any]:
@@ -55,6 +56,7 @@ def get_user_goal_stats(user, filter_department_id=None, filter_responsible_pers
         my_goals = StrategicGoal.objects.filter(
             Q(owner=user) | Q(responsible_person=user) | Q(participants=user)
         ).distinct()
+    my_goals = apply_goal_company_scope(my_goals, user)
     
     # 应用日期筛选条件（使用执行时间范围：start_date 和 end_date）
     if filter_start_date:
@@ -145,6 +147,7 @@ def get_user_collaboration_goal_stats(user, filter_department_id=None, filter_re
     else:
         # 没有筛选，查询当前用户作为参与者的目标（排除自己负责的）
         collaboration_goals = StrategicGoal.objects.filter(participants=user).exclude(responsible_person=user)
+    collaboration_goals = apply_goal_company_scope(collaboration_goals, user)
     
     # 应用日期筛选条件（使用执行时间范围：start_date 和 end_date）
     if filter_start_date:
@@ -202,8 +205,9 @@ def get_company_goal_stats(user) -> Dict[str, Any]:
             - status_distribution: 状态分布
             - progress_overview: 进度概览
     """
-    # 公司目标
+    # 公司目标（按部门公司隔离，无 company 字段）
     company_goals = StrategicGoal.objects.filter(level='company')
+    company_goals = apply_goal_company_scope(company_goals, user)
     
     # 总目标数
     total = company_goals.count()

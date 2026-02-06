@@ -6,16 +6,6 @@
 {% block form_title %}{{ page_title|default:"创建客户线索" }}{% endblock form_title %}
 {% block form_subtitle %}{{ form_page_subtitle_text|default:"请填写客户线索基本信息" }}{% endblock form_subtitle %}
 
-{% block form_header_actions %}
-  {% if list_url %}
-    <a href="{{ list_url }}" class="btn btn-secondary">返回列表</a>
-  {% elif cancel_url_name %}
-    <a href="{% url cancel_url_name %}" class="btn btn-secondary">返回列表</a>
-  {% else %}
-    <a href="{% url 'customer_pages:customer_lead_list' %}" class="btn btn-secondary">返回列表</a>
-  {% endif %}
-{% endblock form_header_actions %}
-
 {% block form_basic_info_card %}
 <div class="form-card form-card-basic-info">
   <div class="form-card-header">
@@ -74,36 +64,30 @@
     </h3>
   </div>
   <div class="form-card-body">
-    {% block form_fields %}
     <div class="row g-3">
+      {% block form_fields %}
       <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
         <label for="{{ form.province.id_for_label }}" class="form-label">{{ form.province.label }}</label>
         {{ form.province }}
-        {% if form.province.errors %}
-        <div class="invalid-feedback d-block">{{ form.province.errors }}</div>
-        {% endif %}
+        {% if form.province.errors %}<div class="invalid-feedback d-block">{{ form.province.errors }}</div>{% endif %}
       </div>
       <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
         <label for="{{ form.city.id_for_label }}" class="form-label">{{ form.city.label }}</label>
         {{ form.city }}
-        {% if form.city.errors %}
-        <div class="invalid-feedback d-block">{{ form.city.errors }}</div>
-        {% endif %}
+        {% if form.city.errors %}<div class="invalid-feedback d-block">{{ form.city.errors }}</div>{% endif %}
       </div>
       <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
         <label for="{{ form.district.id_for_label }}" class="form-label">{{ form.district.label }}</label>
         {{ form.district }}
-        {% if form.district.errors %}
-        <div class="invalid-feedback d-block">{{ form.district.errors }}</div>
-        {% endif %}
+        {% if form.district.errors %}<div class="invalid-feedback d-block">{{ form.district.errors }}</div>{% endif %}
       </div>
+      {% endblock form_fields %}
     </div>
-    {% endblock form_fields %}
   </div>
 </div>
 {% endblock form_other_fields_card %}
 
 {% block form_actions %}
-  <a href="{% url cancel_url_name|default:'customer_pages:customer_lead_list' %}" class="btn btn-secondary">取消</a>
-  <button type="button" class="btn btn-primary" id="headerSubmitButton">创建</button>
+{% if list_url %}<a href="{{ list_url }}" class="btn btn-secondary">取消</a>{% else %}<a href="{% url cancel_url_name|default:'customer_pages:customer_lead_list' %}" class="btn btn-secondary">取消</a>{% endif %}
+<button type="button" class="btn btn-primary" id="headerSubmitButton">创建</button>
 {% endblock form_actions %}

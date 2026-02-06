@@ -57,3 +57,30 @@
 - 仅新增该文档
 - 文档含「只允许/禁止/不得/拒绝合并」等关键词
 - `git diff --stat` 仅 1 个文件
+
+---
+
+## [S1-CreateFormBase-基本信息卡片固化] 治理证据（DoD）
+
+**执行日期**：2025-02-05
+
+### 改动点（A/B/C）
+
+- **A**：`create_form_base.html` 中「基本信息」卡片**永远渲染**，不再用 `{% if form.responsible_department %}` 包住整卡；三字段（所属部门、负责人、表单编号）按存在性渲染，缺字段时显示占位「该表单未配置此字段」；表单编号支持优先级：`goal_number` → `plan_number` → `form_number` → `goal_number_display` → `plan_number_display`。
+- **B**：「详细信息」卡片默认 `form_fields` 自动循环 `form.visible_fields`，排除上述三字段及 `goal_number_display`/`plan_number_display`，并输出 `help_text`。
+- **C**：全仓清理子模板重复渲染三字段：`plan_adjustment_form.html`、`goal_adjustment_form.html` 中 `form_first_row_fields` 内对 `form.responsible_department`、`form.responsible_person`、`form.plan_number_display`/`form.goal_number_display` 的渲染已删除，改由基模统一输出。
+
+### 全局 grep 验收结果（D1）
+
+在 `backend/templates` 下执行：
+
+- `grep -RIn "form\.responsible_department" "$T" | grep -v "shared/create_form_base.html"`
+- `grep -RIn "form\.responsible_person" "$T" | grep -v "shared/create_form_base.html"`
+- `grep -RInE "form\.(goal_number|plan_number|form_number)" "$T" | grep -v "shared/create_form_base.html"`
+
+**结果**：无输出（三字段仅出现在 `shared/create_form_base.html`）。
+
+### 抽检页面列表（D2）
+
+- 继承 create_form_base 的创建类页面均会固定显示「基本信息」卡片，三字段由基模渲染；未覆写 `form_fields` 的页面将自动在「详细信息」中展示除三字段外的全部可见字段。
+- 已抽检逻辑：`goal_form`、`plan_form` 不覆盖 `form_basic_info_card`，由基模渲染基本信息；`plan_adjustment_form`、`goal_adjustment_form` 已移除三字段块，由基模渲染（含 `*_number_display`）。

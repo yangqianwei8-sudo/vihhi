@@ -5,6 +5,7 @@
 {% load static %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/customer/visit-plan-flow.css' %}">
 <style>
     .step-indicator {
         display: flex;
@@ -149,7 +150,7 @@
                                     <div class="text-danger small">{{ forms.step1.plan_date.errors }}</div>
                                     {% endif %}
                                 </div>
-                                <div class="info-item" style="grid-column: 1 / -1;">
+                                <div class="info-item vpf-grid-full">
                                     <label class="info-label info-label-required">{{ forms.step1.plan_title.label }}</label>
                                     {{ forms.step1.plan_title }}
                                     {% if forms.step1.plan_title.errors %}
@@ -164,11 +165,11 @@
                                     <label class="info-label">{{ forms.step1.participants.label }}</label>
                                     {{ forms.step1.participants }}
                                 </div>
-                                <div class="info-item" style="grid-column: 1 / -1;">
+                                <div class="info-item vpf-grid-full">
                                     <label class="info-label">{{ forms.step1.related_opportunity.label }}</label>
                                     {{ forms.step1.related_opportunity }}
                                 </div>
-                                <div class="info-item" style="grid-column: 1 / -1;">
+                                <div class="info-item vpf-grid-full">
                                     <label class="info-label info-label-required">{{ forms.step1.plan_purpose.label }}</label>
                                     {{ forms.step1.plan_purpose }}
                                     {% if forms.step1.plan_purpose.errors %}
@@ -247,7 +248,7 @@
                             </div>
                             {% else %}
 
-                            <div class="info-item" style="grid-column: 1 / -1;">
+                            <div class="info-item vpf-grid-full">
                                 <label class="info-label info-label-required">{{ forms.step2.communication_checklist.label }}</label>
                                 {{ forms.step2.communication_checklist }}
                                 {% if forms.step2.communication_checklist.errors %}
@@ -294,7 +295,7 @@
                                     <label class="info-label">{{ forms.step3.longitude.label }}</label>
                                     {{ forms.step3.longitude }}
                                 </div>
-                                <div class="info-item" style="grid-column: 1 / -1;">
+                                <div class="info-item vpf-grid-full">
                                     <label class="info-label">{{ forms.step3.notes.label }}</label>
                                     {{ forms.step3.notes }}
                                 </div>
@@ -338,22 +339,22 @@
                             </div>
                         </div>
                         <div class="info-section">
-                            <div class="info-item" style="grid-column: 1 / -1;">
+                            <div class="info-item vpf-grid-full">
                                 <label class="info-label info-label-required">{{ forms.step4.visit_result.label }}</label>
                                 {{ forms.step4.visit_result }}
                                 {% if forms.step4.visit_result.errors %}
                                 <div class="text-danger small">{{ forms.step4.visit_result.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="info-item" style="grid-column: 1 / -1;">
+                            <div class="info-item vpf-grid-full">
                                 <label class="info-label">{{ forms.step4.customer_feedback.label }}</label>
                                 {{ forms.step4.customer_feedback }}
                             </div>
-                            <div class="info-item" style="grid-column: 1 / -1;">
+                            <div class="info-item vpf-grid-full">
                                 <label class="info-label">{{ forms.step4.key_points.label }}</label>
                                 {{ forms.step4.key_points }}
                             </div>
-                            <div class="info-item" style="grid-column: 1 / -1;">
+                            <div class="info-item vpf-grid-full">
                                 <label class="info-label">{{ forms.step4.next_actions.label }}</label>
                                 {{ forms.step4.next_actions }}
                             </div>
@@ -388,296 +389,5 @@
     </div>
 </div>
 
-<script>
-    // 步骤切换逻辑
-    const stepItems = document.querySelectorAll('.step-item');
-    const stepContents = document.querySelectorAll('.step-content');
-    const currentStepInput = document.getElementById('currentStep');
-    let currentStep = parseInt(currentStepInput.value);
-
-    // 更新步骤显示
-    function updateStepDisplay(step) {
-        // 更新步骤指示器
-        stepItems.forEach((item, index) => {
-            const stepNum = index + 1;
-            item.classList.remove('active', 'completed');
-            if (stepNum < step) {
-                item.classList.add('completed');
-            } else if (stepNum === step) {
-                item.classList.add('active');
-            }
-        });
-
-        // 更新步骤内容
-        stepContents.forEach((content) => {
-            const contentStep = parseInt(content.dataset.step);
-            content.classList.remove('active');
-            if (contentStep === step) {
-                content.classList.add('active');
-            }
-        });
-
-        currentStepInput.value = step;
-    }
-
-    // 初始化显示
-    updateStepDisplay(currentStep);
-
-    // 定位功能（第三步）
-    function updateLocationDisplay(latitude, longitude, address) {
-        const locationDisplay = document.getElementById('locationDisplay');
-        const currentLocationDisplay = document.getElementById('currentLocationDisplay');
-
-        if (latitude && longitude) {
-            const lat = parseFloat(latitude).toFixed(7);
-            const lon = parseFloat(longitude).toFixed(7);
-
-            let displayHtml = `
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <i class="bi bi-check-circle-fill text-success"></i>
-                    <span class="fw-bold text-success">定位成功</span>
-                </div>
-            `;
-
-            if (address) {
-                displayHtml += `
-                    <div class="mb-2">
-                        <div class="text-muted small">地址：</div>
-                        <div class="fw-semibold">${address}</div>
-                    </div>
-                `;
-            }
-
-            displayHtml += `
-                <div>
-                    <div class="text-muted small">坐标：</div>
-                    <div class="font-monospace small">纬度 ${lat}，经度 ${lon}</div>
-                </div>
-            `;
-
-            if (locationDisplay) {
-                locationDisplay.innerHTML = displayHtml;
-            }
-
-            // 更新当前地理位置显示区域
-            if (currentLocationDisplay) {
-                let currentDisplayHtml = `
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-check-circle-fill text-success"></i>
-                        <span class="fw-bold text-success">定位成功</span>
-                    </div>
-                `;
-
-                if (address) {
-                    currentDisplayHtml += `
-                        <div class="w-100 mt-2">
-                            <div class="text-muted small">地址：</div>
-                            <div class="fw-semibold">${address}</div>
-                        </div>
-                    `;
-                }
-
-                currentDisplayHtml += `
-                    <div class="w-100 mt-2">
-                        <div class="text-muted small">坐标：</div>
-                        <div class="font-monospace small">纬度 ${lat}，经度 ${lon}</div>
-                    </div>
-                `;
-
-                currentLocationDisplay.innerHTML = currentDisplayHtml;
-            }
-        } else {
-            if (locationDisplay) {
-                // TODO: 使用DOMPurify清理HTML
-            locationDisplay.innerHTML = '<div class="text-muted"><i class="bi bi-exclamation-circle"></i> 未获取到位置信息</div>';
-            }
-            if (currentLocationDisplay) {
-                // TODO: 使用DOMPurify清理HTML
-            currentLocationDisplay.innerHTML = '<div class="text-muted"><i class="bi bi-exclamation-circle"></i> 未获取到位置信息</div>';
-            }
-        }
-    }
-
-    // 更新当前地理位置显示状态
-    function updateCurrentLocationStatus(message, isSuccess = true) {
-        const currentLocationDisplay = document.getElementById('currentLocationDisplay');
-        if (!currentLocationDisplay) return;
-
-        const icon = isSuccess ? 'bi-hourglass-split' : 'bi-exclamation-circle';
-        const color = isSuccess ? 'text-info' : 'text-danger';
-        // TODO: 使用DOMPurify清理HTML
-            currentLocationDisplay.innerHTML = `
-            <div class="${color}">
-                <i class="bi ${icon}"></i> ${message}
-            </div>
-        `;
-    }
-
-    async function getAddressFromCoordinates(latitude, longitude) {
-        try {
-            updateCurrentLocationStatus('正在解析地址...', true);
-            const response = await fetch(`/api/customer/regeocode/?latitude=${latitude}&longitude=${longitude}`, {
-                method: 'GET',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                },
-                credentials: 'same-origin'
-            });
-
-            const data = await response.json();
-
-            if (data.success && data.formatted_address) {
-                const locationInput = document.getElementById('id_checkin_location');
-                if (locationInput) {
-                    locationInput.value = data.formatted_address;
-                    locationInput.removeAttribute('readonly');
-                }
-                updateLocationDisplay(latitude, longitude, data.formatted_address);
-                return true;
-            } else {
-                updateLocationDisplay(latitude, longitude, null);
-                return false;
-            }
-        } catch (error) {
-            updateLocationDisplay(latitude, longitude, null);
-            return false;
-        }
-    }
-
-    function getLocation(showStatus = true) {
-        const locationDisplay = document.getElementById('locationDisplay');
-        const latitudeInput = document.getElementById('id_latitude');
-        const longitudeInput = document.getElementById('id_longitude');
-
-        if (!navigator.geolocation) {
-            if (showStatus) {
-                updateCurrentLocationStatus('浏览器不支持GPS定位，尝试IP定位...', false);
-            }
-            // GPS不支持时自动尝试IP定位
-            setTimeout(() => getIPLocation(), 1000);
-            return;
-        }
-
-        if (showStatus) {
-            updateCurrentLocationStatus('正在获取GPS位置...', true);
-        }
-        if (locationDisplay) {
-            // TODO: 使用DOMPurify清理HTML
-            locationDisplay.innerHTML = '<div class="text-muted"><i class="bi bi-hourglass-split"></i> 正在获取位置信息...</div>';
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            async function(position) {
-                const lat = position.coords.latitude.toFixed(7);
-                const lon = position.coords.longitude.toFixed(7);
-
-                if (latitudeInput) latitudeInput.value = lat;
-                if (longitudeInput) longitudeInput.value = lon;
-
-                await getAddressFromCoordinates(lat, lon);
-            },
-            function(error) {
-                let errorMessage = 'GPS定位失败';
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage = '定位权限被拒绝，尝试IP定位...';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage = '位置信息不可用，尝试IP定位...';
-                        break;
-                    case error.TIMEOUT:
-                        errorMessage = '定位超时，尝试IP定位...';
-                        break;
-                    default:
-                        errorMessage = '定位失败，尝试IP定位...';
-                        break;
-                }
-                if (showStatus) {
-                    updateCurrentLocationStatus(errorMessage, false);
-                }
-                if (locationDisplay) {
-                    // TODO: 使用DOMPurify清理HTML
-            locationDisplay.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle"></i> 定位失败：' + error.message + '</div>';
-                }
-                // GPS定位失败，自动尝试IP定位
-                setTimeout(() => getIPLocation(), 1000);
-            },
-            {
-                enableHighAccuracy: false,
-                timeout: 30000,
-                maximumAge: 60000
-            }
-        );
-    }
-
-    // IP定位（备选方案）
-    async function getIPLocation() {
-        updateCurrentLocationStatus('正在通过IP获取位置...', true);
-
-        try {
-            const response = await fetch('/api/customer/ip-location/', {
-                method: 'GET',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                },
-                credentials: 'same-origin'
-            });
-
-            const data = await response.json();
-
-            if (data.success && data.center_latitude && data.center_longitude) {
-                const lat = data.center_latitude.toFixed(7);
-                const lon = data.center_longitude.toFixed(7);
-
-                const latitudeInput = document.getElementById('id_latitude');
-                const longitudeInput = document.getElementById('id_longitude');
-
-                if (latitudeInput) latitudeInput.value = lat;
-                if (longitudeInput) longitudeInput.value = lon;
-
-                // 调用API获取详细地址
-                await getAddressFromCoordinates(lat, lon);
-
-                updateCurrentLocationStatus(`IP定位成功（${data.city || '城市级别'}）`, true);
-            } else {
-                updateCurrentLocationStatus('IP定位失败：' + (data.message || '无法获取位置信息'), false);
-            }
-        } catch (error) {
-            updateCurrentLocationStatus('IP定位失败，请检查网络连接', false);
-        }
-    }
-
-    // 检查是否已有位置信息（第三步）
-    if (currentStep === 3) {
-        const latitudeInput = document.getElementById('id_latitude');
-        const longitudeInput = document.getElementById('id_longitude');
-        const locationInput = document.getElementById('id_checkin_location');
-
-        if (latitudeInput && latitudeInput.value && longitudeInput && longitudeInput.value) {
-            updateLocationDisplay(latitudeInput.value, longitudeInput.value, locationInput ? locationInput.value : '');
-        } else {
-            // 如果没有位置信息，自动尝试定位
-            setTimeout(() => {
-                if (navigator.geolocation) {
-                    updateCurrentLocationStatus('正在自动获取位置...', true);
-                    getLocation(true);
-                } else {
-                    // 不支持GPS，尝试IP定位
-                    getIPLocation();
-                }
-            }, 1000);
-        }
-    }
-
-    // 事件处理器: handle_onclick_0
-    document.addEventListener('DOMContentLoaded', function() {
-        const element = document.querySelector('.btn');
-        if (element) {
-            element.addEventListener('click', function(e) {
-                getLocation()
-            });
-        }
-    });
-
-</script>
+<script src="{% static 'js/customer/visit-plan-flow.js' %}"></script>
 {% endblock %}

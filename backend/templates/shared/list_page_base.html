@@ -50,10 +50,10 @@
 
   {# 筛选器区域：统一标题「全部」+ nav-tabs + 筛选栏；保留 .list-page-filters 供 JS（如 filter-fields-settings.js）查找 #}
   {% block list_filters_section %}
-  <div class="list-page-filters mb-4">
+  <div class="list-page-filters mb-4" data-role="list-filters">
     {# 横向标签：统一标题「全部」，其他标签由子模板 list_filter_tags_extra 定义 #}
     {% block list_filter_tags %}
-    <ul class="nav nav-tabs list-page-filter-tabs" id="listPageFilterTabs" role="tablist">
+    <ul class="nav nav-tabs list-page-filter-tabs" id="listPageFilterTabs" role="tablist" data-role="dataset-tabs">
       <li class="nav-item" role="presentation">
         <a class="nav-link {% if not active_filter_tag %}active{% endif %}" href="{{ url_all|default:request.path }}" role="tab">全部</a>
       </li>
@@ -65,16 +65,16 @@
     {# 筛选栏：样式与计划管理首页 pm-filter-bar 一致 #}
     <div class="list-page-filter-bar mb-0 mt-2 p-3 rounded">
       {% block list_filter_fields_settings_btn %}
-      <button type="button" class="btn btn-sm {% if show_filter_fields_settings_btn %}d-inline-flex{% else %}d-none{% endif %}" id="settingsFilterFieldsBtn" title="自定义筛选字段">
+      <button type="button" class="btn btn-sm {% if show_filter_fields_settings_btn %}d-inline-flex{% else %}d-none{% endif %}" id="settingsFilterFieldsBtn" title="自定义筛选字段" data-role="filter-controller" data-action="configure-filter-fields">
         <i class="bi bi-gear"></i> 自定义筛选字段
       </button>
       {% endblock list_filter_fields_settings_btn %}
 
-      <div class="list-page-filter-row row g-3 row-cols-2 row-cols-md-5 align-items-end" id="filterFieldsContainer">
-        <form id="filterForm" method="get" {% if filter_form_action %} action="{{ filter_form_action }}"{% endif %}>
+      <div class="list-page-filter-row row g-3 row-cols-2 row-cols-md-5 align-items-end" id="filterFieldsContainer" data-role="filter-fields">
+        <form id="filterForm" method="get" data-role="filter-form" {% if filter_form_action %} action="{{ filter_form_action }}"{% endif %}>
           {% block list_filters_content %}
           {% block list_filters_basic %}
-          <div class="col list-page-filter-item" data-filter-key="search">
+          <div class="col list-page-filter-item" data-role="filter-field" data-filter-key="search">
             <label class="form-label list-page-filter-label">关键词</label>
             <input type="text" name="search" class="form-control form-control-sm"
                    placeholder="{% block search_placeholder %}搜索...{% endblock %}"
@@ -86,7 +86,7 @@
           {% endblock list_filters_content %}
         </form>
         {% block list_filter_actions %}
-        <div class="col list-page-filter-actions align-self-end">
+        <div class="col list-page-filter-actions align-self-end" data-role="filter-actions">
           <div class="d-flex gap-2">
             <button type="submit" form="filterForm" class="btn btn-primary btn-sm">
               <i class="bi bi-funnel"></i> 筛选

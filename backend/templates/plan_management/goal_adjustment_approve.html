@@ -11,6 +11,7 @@
 {% endblock %}
 
 {% block module_styles %}
+<link rel="stylesheet" href="{% static 'css/plan/goal-adjustment-approve.css' %}">
 {% endblock %}
 
 {% block pm_content %}
@@ -41,7 +42,7 @@
 </div>
 
 {% if adjustment.adjustment_type == 'time' %}
-<div class="detail-card" style="margin-top: 20px;">
+<div class="detail-card gaa-mt-20">
   <div class="detail-card-title">⏰ 时间调整详情</div>
   <div class="detail-info-grid">
     <div class="detail-info-item">
@@ -63,7 +64,7 @@
   </div>
 </div>
 {% elif adjustment.adjustment_type == 'responsible' %}
-<div class="detail-card" style="margin-top: 20px;">
+<div class="detail-card gaa-mt-20">
   <div class="detail-card-title">👤 负责人调整详情</div>
   <div class="detail-info-grid">
     <div class="detail-info-item">
@@ -77,7 +78,7 @@
   </div>
 </div>
 {% elif adjustment.adjustment_type == 'target_value' %}
-<div class="detail-card" style="margin-top: 20px;">
+<div class="detail-card gaa-mt-20">
   <div class="detail-card-title">🎯 目标值调整详情</div>
   <div class="detail-info-grid">
     <div class="detail-info-item">
@@ -92,32 +93,32 @@
 </div>
 {% endif %}
 
-<div class="detail-card" style="margin-top: 20px;">
+<div class="detail-card gaa-mt-20">
   <div class="detail-card-title">📝 调整原因</div>
-  <div style="padding: 16px; font-size: 12px; color: #333333; line-height: 1.6;">
+  <div class="gaa-card-body">
     {{ adjustment.adjustment_reason|linebreaks }}
   </div>
 </div>
 
 {% if adjustment.adjustment_content %}
-<div class="detail-card" style="margin-top: 20px;">
+<div class="detail-card gaa-mt-20">
   <div class="detail-card-title">📄 调整内容</div>
-  <div style="padding: 16px; font-size: 12px; color: #333333; line-height: 1.6;">
+  <div class="gaa-card-body">
     {{ adjustment.adjustment_content|linebreaks }}
   </div>
 </div>
 {% endif %}
 
-<form method="post" style="margin-top: 20px;">
+<form method="post" class="gaa-mt-20">
   {% csrf_token %}
   <div class="detail-card">
     <div class="detail-card-title">✅ 审批意见</div>
-    <div style="padding: 16px;">
+    <div class="gaa-card-body">
       <textarea name="approval_notes" rows="4" class="form-control" placeholder="请输入审批意见（可选）"></textarea>
     </div>
   </div>
 
-  <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px;">
+  <div class="gaa-actions">
     <a href="{% url 'plan_pages:goal_adjustment_list' %}" class="list-btn">取消</a>
     <button type="submit" class="list-btn list-btn-primary">批准申请</button>
   </div>

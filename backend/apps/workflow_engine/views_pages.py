@@ -25,31 +25,7 @@ WORKFLOW_ENGINE_MENU = [
         'permission': 'workflow_engine.view',
         'path_keywords': ['home'],
     },
-    {
-        'id': 'workflow_management',
-        'label': '流程管理',
-        'icon': '⚙️',
-        'permission': 'workflow_engine.view',
-        'expanded': True,
-        'children': [
-            {
-                'id': 'workflow_list',
-                'label': '流程模板',
-                'icon': '📄',
-                'url_name': 'workflow_engine:workflow_list',
-                'permission': 'workflow_engine.view',
-                'path_keywords': ['workflow', 'workflows'],
-            },
-            {
-                'id': 'workflow_create',
-                'label': '新建流程模板',
-                'icon': '➕',
-                'url_name': 'workflow_engine:workflow_create',
-                'permission': 'workflow_engine.view',
-                'path_keywords': ['workflows/create', 'workflow/create'],
-            },
-        ],
-    },
+    # G1-5: 流程管理菜单已移除，流程配置仅允许在 Django Admin 中维护
     {
         'id': 'approval_management',
         'label': '审批管理',
@@ -254,7 +230,7 @@ def workflow_home(request):
                 'icon': '⚙️',
                 'value': str(workflow_total),
                 'subvalue': f'启用 {workflow_active} | 草稿 {workflow_draft}',
-                'url': reverse('workflow_engine:workflow_list'),
+                'url': None,  # G1-5: 流程模板管理已移除，仅允许在 Django Admin 中维护
                 'variant': 'primary' if workflow_total > 0 else 'secondary'
             },
             {
@@ -355,10 +331,13 @@ def workflow_home(request):
         # ========== 最近活动 ==========
         recent_activities = {}
         
-        # 最近审批记录（所有审批实例，按时间排序）
+        # 最近审批记录（仅当前用户公司，按 applicant.company_id 过滤）
         recent_approvals = ApprovalInstance.objects.all().select_related(
             'workflow', 'applicant', 'content_type'
-        ).order_by('-created_time')[:10]
+        ).order_by('-created_time')
+        if getattr(request.user, 'company_id', None):
+            recent_approvals = recent_approvals.filter(applicant__company_id=request.user.company_id)
+        recent_approvals = recent_approvals[:10]
         
         recent_activities['recent_approvals'] = []
         for approval in recent_approvals:
@@ -419,279 +398,59 @@ def workflow_home(request):
 
 
 @login_required
-def workflow_list(request):
-    """审批流程模板列表"""
-    workflows = WorkflowTemplate.objects.all().order_by('-created_time')
-    
-    # 搜索
-    search = request.GET.get('search', '')
-    if search:
-        workflows = workflows.filter(
-            Q(name__icontains=search) |
-            Q(code__icontains=search) |
-            Q(description__icontains=search)
-        )
-    
-    # 状态筛选
-    status = request.GET.get('status', '')
-    if status:
-        workflows = workflows.filter(status=status)
-    
-    # 分页
-    page_size = request.GET.get('page_size', '10')
-    try:
-        per_page = int(page_size)
-        if per_page not in [10, 20, 50]:
-            per_page = 10
-    except (ValueError, TypeError):
-        per_page = 10
-    
-    paginator = Paginator(workflows, per_page)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
-    
-    context = _context(
-        "流程模板",
-        "⚙️",
-        "配置和管理审批流程模板",
-        request=request,
-    )
-    context.update({
-        'workflows': page_obj,
-        'page_obj': page_obj,  # 为了兼容性，同时传递 page_obj
-        'search': search,
-        'selected_status': status,
-        'status_choices': WorkflowTemplate.STATUS_CHOICES,
-        'show_list_checkboxes': True,
-    })
-    
-    return render(request, 'workflow_engine/workflow_list.html', context)
+def workflow_list_disabled(request):
+    """审批流程模板列表（G1-5: 已禁用，流程配置仅允许在 Django Admin 中维护）"""
+    from django.http import HttpResponseForbidden
+    messages.error(request, '流程模板管理已移除，请使用 Django Admin 进行流程配置')
+    return HttpResponseForbidden('流程模板管理已移除，请使用 Django Admin 进行流程配置')
 
 
 @login_required
-def workflow_detail(request, workflow_id):
-    """审批流程模板详情"""
-    workflow = get_object_or_404(WorkflowTemplate, id=workflow_id)
-    nodes = workflow.nodes.all().order_by('sequence')
-    
-    context = _context(
-        f"流程详情 - {workflow.name}",
-        "⚙️",
-        workflow.description or "查看和配置审批流程节点",
-        request=request,
-    )
-    context.update({
-        'workflow': workflow,
-        'nodes': nodes,
-    })
-    
-    return render(request, 'workflow_engine/workflow_detail.html', context)
+def workflow_detail_disabled(request, workflow_id):
+    """审批流程模板详情（G1-5: 已禁用，流程配置仅允许在 Django Admin 中维护）"""
+    from django.http import HttpResponseForbidden
+    messages.error(request, '流程模板管理已移除，请使用 Django Admin 进行流程配置')
+    return HttpResponseForbidden('流程模板管理已移除，请使用 Django Admin 进行流程配置')
 
 
 @login_required
-def workflow_create(request):
-    """创建审批流程模板"""
-    form = WorkflowTemplateForm(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        try:
-            workflow = form.save(commit=False)
-            workflow.created_by = request.user
-            workflow.save()
-            messages.success(request, f'审批流程 {workflow.name} 创建成功')
-            return redirect('workflow_engine:workflow_detail', workflow_id=workflow.id)
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.exception('创建审批流程失败: %s', str(e))
-            messages.error(request, f'创建审批流程失败：{str(e)}')
-    
-    context = _context(
-        "创建审批流程",
-        "➕",
-        "创建新的审批流程模板",
-        request=request,
-    )
-    context.update({
-        'form': form,
-        'workflow': None,
-        'status_choices': WorkflowTemplate.STATUS_CHOICES,
-        'timeout_action_choices': WorkflowTemplate._meta.get_field('timeout_action').choices,
-    })
-    
-    return render(request, 'workflow_engine/workflow_form.html', context)
+def workflow_create_disabled(request):
+    """创建审批流程模板（G1-5: 已禁用，流程配置仅允许在 Django Admin 中维护）"""
+    from django.http import HttpResponseForbidden
+    messages.error(request, '流程模板管理已移除，请使用 Django Admin 进行流程配置')
+    return HttpResponseForbidden('流程模板管理已移除，请使用 Django Admin 进行流程配置')
 
 
 @login_required
-def workflow_edit(request, workflow_id):
-    """编辑审批流程模板"""
-    workflow = get_object_or_404(WorkflowTemplate, id=workflow_id)
-    form = WorkflowTemplateForm(request.POST or None, instance=workflow)
-    
-    if request.method == 'POST' and form.is_valid():
-        try:
-            form.save()
-            messages.success(request, f'审批流程 {workflow.name} 更新成功')
-            return redirect('workflow_engine:workflow_detail', workflow_id=workflow.id)
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.exception('更新审批流程失败: %s', str(e))
-            messages.error(request, f'更新审批流程失败：{str(e)}')
-    
-    context = _context(
-        f"编辑审批流程 - {workflow.name}",
-        "✏️",
-        "编辑审批流程模板",
-        request=request,
-    )
-    context.update({
-        'form': form,
-        'workflow': workflow,
-        'status_choices': WorkflowTemplate.STATUS_CHOICES,
-        'timeout_action_choices': WorkflowTemplate._meta.get_field('timeout_action').choices,
-    })
-    
-    return render(request, 'workflow_engine/workflow_form.html', context)
+def workflow_edit_disabled(request, workflow_id):
+    """编辑审批流程模板（G1-5: 已禁用，流程配置仅允许在 Django Admin 中维护）"""
+    from django.http import HttpResponseForbidden
+    messages.error(request, '流程模板管理已移除，请使用 Django Admin 进行流程配置')
+    return HttpResponseForbidden('流程模板管理已移除，请使用 Django Admin 进行流程配置')
 
 
 @login_required
-def node_create(request, workflow_id):
-    """创建审批节点"""
-    workflow = get_object_or_404(WorkflowTemplate, id=workflow_id)
-    
-    if request.method == 'POST':
-        try:
-            node = ApprovalNode.objects.create(
-                workflow=workflow,
-                name=request.POST.get('name'),
-                node_type=request.POST.get('node_type', 'approval'),
-                sequence=int(request.POST.get('sequence', 1)),
-                approver_type=request.POST.get('approver_type', ''),
-                approval_mode=request.POST.get('approval_mode', 'single'),
-                is_required=request.POST.get('is_required') == 'on',
-                can_reject=request.POST.get('can_reject') == 'on',
-                can_transfer=request.POST.get('can_transfer') == 'on',
-                timeout_hours=int(request.POST.get('timeout_hours', 0) or 0) or None,
-                description=request.POST.get('description', ''),
-            )
-            
-            # 设置审批人
-            approver_user_ids = request.POST.getlist('approver_users')
-            if approver_user_ids:
-                node.approver_users.set(approver_user_ids)
-            
-            approver_role_ids = request.POST.getlist('approver_roles')
-            if approver_role_ids:
-                node.approver_roles.set(approver_role_ids)
-            
-            approver_dept_ids = request.POST.getlist('approver_departments')
-            if approver_dept_ids:
-                node.approver_departments.set(approver_dept_ids)
-            
-            messages.success(request, f'审批节点 {node.name} 创建成功')
-            return redirect('workflow_engine:workflow_detail', workflow_id=workflow.id)
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.exception('创建审批节点失败: %s', str(e))
-            messages.error(request, f'创建审批节点失败：{str(e)}')
-    
-    context = _context(
-        f"创建审批节点 - {workflow.name}",
-        "➕",
-        "为审批流程添加审批节点",
-        request=request,
-    )
-    context.update({
-        'workflow': workflow,
-        'node_type_choices': ApprovalNode.NODE_TYPE_CHOICES,
-        'approver_type_choices': ApprovalNode.APPROVER_TYPE_CHOICES,
-        'approval_mode_choices': ApprovalNode.APPROVAL_MODE_CHOICES,
-        'users': User.objects.filter(is_active=True).order_by('username'),
-        'roles': Role.objects.all().order_by('name'),
-        'departments': Department.objects.all().order_by('name'),
-    })
-    
-    return render(request, 'workflow_engine/node_form.html', context)
+def node_create_disabled(request, workflow_id):
+    """创建审批节点（G1-5: 已禁用，流程配置仅允许在 Django Admin 中维护）"""
+    from django.http import HttpResponseForbidden
+    messages.error(request, '流程模板管理已移除，请使用 Django Admin 进行流程配置')
+    return HttpResponseForbidden('流程模板管理已移除，请使用 Django Admin 进行流程配置')
 
 
 @login_required
-def node_edit(request, node_id):
-    """编辑审批节点"""
-    node = get_object_or_404(ApprovalNode, id=node_id)
-    workflow = node.workflow
-    
-    if request.method == 'POST':
-        try:
-            node.name = request.POST.get('name')
-            node.node_type = request.POST.get('node_type', 'approval')
-            node.sequence = int(request.POST.get('sequence', 1))
-            node.approver_type = request.POST.get('approver_type', '')
-            node.approval_mode = request.POST.get('approval_mode', 'single')
-            node.is_required = request.POST.get('is_required') == 'on'
-            node.can_reject = request.POST.get('can_reject') == 'on'
-            node.can_transfer = request.POST.get('can_transfer') == 'on'
-            timeout_hours = request.POST.get('timeout_hours', '')
-            node.timeout_hours = int(timeout_hours) if timeout_hours else None
-            node.description = request.POST.get('description', '')
-            node.save()
-            
-            # 更新审批人
-            approver_user_ids = request.POST.getlist('approver_users')
-            node.approver_users.set(approver_user_ids)
-            
-            approver_role_ids = request.POST.getlist('approver_roles')
-            node.approver_roles.set(approver_role_ids)
-            
-            approver_dept_ids = request.POST.getlist('approver_departments')
-            node.approver_departments.set(approver_dept_ids)
-            
-            messages.success(request, f'审批节点 {node.name} 更新成功')
-            return redirect('workflow_engine:workflow_detail', workflow_id=workflow.id)
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.exception('更新审批节点失败: %s', str(e))
-            messages.error(request, f'更新审批节点失败：{str(e)}')
-    
-    context = _context(
-        f"编辑审批节点 - {node.name}",
-        "✏️",
-        "编辑审批节点配置",
-        request=request,
-    )
-    context.update({
-        'node': node,
-        'workflow': workflow,
-        'node_type_choices': ApprovalNode.NODE_TYPE_CHOICES,
-        'approver_type_choices': ApprovalNode.APPROVER_TYPE_CHOICES,
-        'approval_mode_choices': ApprovalNode.APPROVAL_MODE_CHOICES,
-        'users': User.objects.filter(is_active=True).order_by('username'),
-        'roles': Role.objects.all().order_by('name'),
-        'departments': Department.objects.all().order_by('name'),
-    })
-    
-    return render(request, 'workflow_engine/node_form.html', context)
+def node_edit_disabled(request, node_id):
+    """编辑审批节点（G1-5: 已禁用，流程配置仅允许在 Django Admin 中维护）"""
+    from django.http import HttpResponseForbidden
+    messages.error(request, '流程模板管理已移除，请使用 Django Admin 进行流程配置')
+    return HttpResponseForbidden('流程模板管理已移除，请使用 Django Admin 进行流程配置')
 
 
 @login_required
-def node_delete(request, node_id):
-    """删除审批节点"""
-    node = get_object_or_404(ApprovalNode, id=node_id)
-    workflow = node.workflow
-    
-    if request.method == 'POST':
-        try:
-            node_name = node.name
-            node.delete()
-            messages.success(request, f'审批节点 {node_name} 已删除')
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.exception('删除审批节点失败: %s', str(e))
-            messages.error(request, f'删除审批节点失败：{str(e)}')
-    
-    return redirect('workflow_engine:workflow_detail', workflow_id=workflow.id)
+def node_delete_disabled(request, node_id):
+    """删除审批节点（G1-5: 已禁用，流程配置仅允许在 Django Admin 中维护）"""
+    from django.http import HttpResponseForbidden
+    messages.error(request, '流程模板管理已移除，请使用 Django Admin 进行流程配置')
+    return HttpResponseForbidden('流程模板管理已移除，请使用 Django Admin 进行流程配置')
 
 
 @login_required
@@ -998,10 +757,12 @@ def approval_detail(request, instance_id):
         request=request,
     )
     
-    # 获取所有用户列表（用于转交）
+    # 获取用户列表（用于转交，仅同公司用户）
     from django.contrib.auth import get_user_model
     User = get_user_model()
     all_users = User.objects.filter(is_active=True).order_by('username')[:100]
+    if getattr(request.user, 'company_id', None):
+        all_users = all_users.filter(company_id=request.user.company_id)
     
     # 为审批记录添加排序后的记录列表（用于三栏布局）
     instance.records_sorted = sorted(
@@ -1111,14 +872,13 @@ def approval_withdraw(request, instance_id):
         messages.error(request, '您没有权限撤回此审批')
         return redirect('workflow_engine:approval_list_my_submitted')
     
-    # 检查是否可以撤回
+    # 检查是否可以撤回：只要状态是 pending（还没有审批完成），就允许撤回
     if instance.status != 'pending':
         messages.error(request, '只有审批中的申请才能撤回')
         return redirect('workflow_engine:approval_list_my_submitted')
     
-    if not instance.workflow.allow_withdraw:
-        messages.error(request, '此流程不允许撤回')
-        return redirect('workflow_engine:approval_list_my_submitted')
+    # 注意：不再检查 workflow.allow_withdraw，因为所有待审批的流程都应该允许撤回
+    # 如果流程配置不允许撤回，可以在流程配置中设置，但默认允许撤回
     
     from .services import ApprovalEngine
     

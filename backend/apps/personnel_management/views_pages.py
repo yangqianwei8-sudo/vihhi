@@ -118,20 +118,12 @@ def _build_personnel_sidebar_nav(permission_set, request_path=None, active_id=No
     # 定义人事管理菜单结构（分组格式，与计划管理一致）
     PERSONNEL_MENU_STRUCTURE = [
         {
-            'id': 'personnel_basic',
-            'label': '人事管理',
-            'icon': '👥',
+            'id': 'personnel_home',
+            'label': '首页',
+            'url_name': 'personnel_pages:personnel_home',
             'permission': None,
-            'children': [
-                {
-                    'id': 'personnel_home',
-                    'label': '首页',
-                    'url_name': 'personnel_pages:personnel_home',
-                    'permission': None,
-                    'icon': '👥',
-                    'path_keywords': ['personnel_home', 'personnel'],
-                },
-            ],
+            'icon': '🏠',
+            'path_keywords': ['personnel_home', 'personnel'],
         },
         {
             'id': 'organization',
@@ -973,9 +965,11 @@ def employee_management(request):
         request=request,
         use_personnel_nav=True
     )
-    # 获取部门列表（用于筛选）
+    # 获取部门列表（用于筛选）（P0-3: 按当前用户公司过滤）
     try:
         departments = Department.objects.filter(is_active=True).order_by('order', 'name')
+        if getattr(request.user, 'company_id', None):
+            departments = departments.filter(company_id=request.user.company_id)
     except Exception:
         departments = []
     
@@ -2344,10 +2338,11 @@ def department_management(request):
     is_active = request.GET.get('is_active', '')
     parent_id = request.GET.get('parent_id', '')
     
-    # 获取部门列表
+    # 获取部门列表（P0-3: 仅当前用户公司）
     try:
         departments = Department.objects.select_related('parent', 'leader').all()
-        
+        if getattr(request.user, 'company_id', None):
+            departments = departments.filter(company_id=request.user.company_id)
         # 应用筛选条件
         if search:
             departments = departments.filter(
@@ -2373,21 +2368,23 @@ def department_management(request):
         logger.exception('获取部门列表失败: %s', str(e))
         page_obj = None
     
-    # 统计信息
+    # 统计信息（P0-3: 按当前用户公司）
     try:
-        total_departments = Department.objects.count()
-        active_departments = Department.objects.filter(is_active=True).count()
-        inactive_departments = Department.objects.filter(is_active=False).count()
-        
+        dept_base = Department.objects.all()
+        if getattr(request.user, 'company_id', None):
+            dept_base = dept_base.filter(company_id=request.user.company_id)
+        total_departments = dept_base.count()
+        active_departments = dept_base.filter(is_active=True).count()
+        inactive_departments = dept_base.filter(is_active=False).count()
         summary_cards = []
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
-    
-    # 获取所有部门用于下拉筛选
     all_departments = Department.objects.filter(is_active=True).order_by('name')
+    if getattr(request.user, 'company_id', None):
+        all_departments = all_departments.filter(company_id=request.user.company_id)
     
     context = _context(
         "部门管理",
@@ -2463,8 +2460,10 @@ def position_management(request):
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
-    # 获取所有部门用于下拉筛选
+    # 获取所有部门用于下拉筛选（P0-3: 按当前用户公司过滤）
     all_departments = Department.objects.filter(is_active=True).order_by('name')
+    if getattr(request.user, 'company_id', None):
+        all_departments = all_departments.filter(company_id=request.user.company_id)
     
     context = _context(
         "职位管理",
@@ -2493,10 +2492,11 @@ def org_chart(request):
         messages.error(request, '您没有权限查看组织架构图')
         return redirect('personnel_pages:personnel_home')
     
-    # 获取所有部门（树形结构）
+    # 获取所有部门（树形结构）（P0-3: 仅当前用户公司）
     try:
         departments = Department.objects.filter(is_active=True).select_related('parent', 'leader').order_by('order', 'name')
-        
+        if getattr(request.user, 'company_id', None):
+            departments = departments.filter(company_id=request.user.company_id)
         # 构建部门树
         def build_tree(parent_id=None):
             children = [dept for dept in departments if (dept.parent_id if dept.parent else None) == parent_id]
@@ -3088,8 +3088,10 @@ def recruitment_management(request):
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
-    # 获取所有部门用于下拉筛选
+    # 获取所有部门用于下拉筛选（P0-3: 按当前用户公司过滤）
     all_departments = Department.objects.filter(is_active=True).order_by('name')
+    if getattr(request.user, 'company_id', None):
+        all_departments = all_departments.filter(company_id=request.user.company_id)
     
     context = _context(
         "招聘管理",

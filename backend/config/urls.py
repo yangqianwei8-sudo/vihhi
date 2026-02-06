@@ -92,7 +92,8 @@ urlpatterns = [
     path('api/settlement/', include(('backend.apps.settlement_management.urls_api', 'settlement'), namespace='settlement')),  # 结算管理API（由 settlement_center 迁入）
     path('api/archive/', include(('backend.apps.archive_management.urls_api', 'archive'), namespace='archive_api')),
     path('api/plan/', include(('backend.apps.plan_management.urls', 'plan'), namespace='plan')),  # 计划管理API
-    
+    path('api/output/', include(('backend.apps.output_value_management.urls_api', 'output_api'), namespace='output_api')),  # 产值管理 V1 API（冻结文档）
+
     # 页面路由
     path('production/', include(('backend.apps.production_management.urls', 'production'), namespace='production_pages')),  # 生产管理页面
     path('resource/', include(('backend.apps.resource_standard.urls', 'resource_standard'), namespace='resource_standard_pages')),

@@ -248,9 +248,12 @@ class ProfileCompletionForm(forms.Form):
         flat_choices = POSITION_LOOKUP.get(service_category, POSITION_LOOKUP.get('internal', {}))
 
         if service_category == 'internal':
+            dept_qs = Department.objects.filter(is_active=True).order_by('order', 'name')
+            if getattr(self.user, 'company_id', None):
+                dept_qs = dept_qs.filter(company_id=self.user.company_id)
             self.fields['department'] = forms.ModelChoiceField(
                 label='部门',
-                queryset=Department.objects.filter(is_active=True).order_by('order', 'name'),
+                queryset=dept_qs,
                 widget=forms.Select(attrs={'class': 'form-select'})
             )
         else:

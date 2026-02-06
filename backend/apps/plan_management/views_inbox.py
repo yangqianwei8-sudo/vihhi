@@ -54,8 +54,8 @@ class InboxAPI(APIView):
         can_approve_goal = user.is_superuser or user.has_perm("plan_management.approve_strategicgoal")
         if can_approve_goal:
             goals_qs = StrategicGoal.objects.filter(status='pending_approval')
-            # 应用公司隔离
-            goals_qs = apply_company_scope(goals_qs, user)
+            from backend.apps.plan_management.utils import apply_goal_company_scope
+            goals_qs = apply_goal_company_scope(goals_qs, user)  # 目标按部门公司隔离
             # 序列化
             goals_data = {
                 "count": goals_qs.count(),
@@ -99,8 +99,8 @@ class MySubmissionsAPI(APIView):
         
         # 查询我创建的 Goal
         goals_qs = StrategicGoal.objects.filter(created_by=user)
-        # 应用公司隔离
-        goals_qs = apply_company_scope(goals_qs, user)
+        from backend.apps.plan_management.utils import apply_goal_company_scope
+        goals_qs = apply_goal_company_scope(goals_qs, user)  # 目标按部门公司隔离
         goals_data = {
             "count": goals_qs.count(),
             "results": GoalInboxItemSerializer(goals_qs.order_by('-created_time'), many=True).data

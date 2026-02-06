@@ -1,4 +1,5 @@
 {% extends "shared/two_column_layout_base.html" %}
+{% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
@@ -38,6 +39,11 @@
         text-align: right;
         font-family: 'Courier New', monospace;
     }
+    .cfr-th-60 { width: 60%; }
+    .cfr-th-40 { width: 40%; }
+    .cfr-section-title { font-weight: 600; }
+    .cfr-cell-indent { padding-left: 30px; }
+    .cfr-row-net { background-color: #d4edda; }
 </style>
 {% endblock %}
 
@@ -67,26 +73,20 @@
                     <button type="submit" class="btn btn-primary me-2">
                         <i class="bi bi-search"></i> 查询
                     </button>
-                    <button type="button" class="btn btn-success" onclick="generateReport()">
+                    <button type="button" class="btn btn-success" data-action="cash-flow-generate-report">
                         <i class="bi bi-file-earmark-arrow-up"></i> 生成报表
                     </button>
                 </div>
             </div>
         </form>
 
-        <form method="post" id="generateForm" style="display: none;">
+        <form method="post" id="generateForm" class="d-none">
             {% csrf_token %}
             <input type="hidden" name="period_year" id="hidden_period_year" value="{{ period_year }}">
             <input type="hidden" name="period_month" id="hidden_period_month" value="{{ period_month|default:'' }}">
         </form>
 
-        <script>
-        function generateReport() {
-            document.getElementById('hidden_period_year').value = document.querySelector('[name="period_year"]').value;
-            document.getElementById('hidden_period_month').value = document.querySelector('[name="period_month"]').value;
-            document.getElementById('generateForm').submit();
-        }
-        </script>
+        <script src="{% static 'js/financial/cash-flow-report.js' %}"></script>
 
         <div class="text-center mb-4">
             <h3>现金流量表</h3>
@@ -97,20 +97,20 @@
             <table class="cash-flow-table">
                 <thead>
                     <tr>
-                        <th style="width: 60%;">项目</th>
-                        <th style="width: 40%;" class="amount-cell">金额</th>
+                        <th class="cfr-th-60">项目</th>
+                        <th class="cfr-th-40 amount-cell">金额</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="2" style="font-weight: 600;">一、经营活动产生的现金流量</td>
+                        <td colspan="2" class="cfr-section-title">一、经营活动产生的现金流量</td>
                     </tr>
                     <tr>
-                        <td style="padding-left: 30px;">经营活动现金流入</td>
+                        <td class="cfr-cell-indent">经营活动现金流入</td>
                         <td class="amount-cell">¥{{ report_data.operating.income|floatformat:2 }}</td>
                     </tr>
                     <tr>
-                        <td style="padding-left: 30px;">经营活动现金流出</td>
+                        <td class="cfr-cell-indent">经营活动现金流出</td>
                         <td class="amount-cell">¥{{ report_data.operating.expense|floatformat:2 }}</td>
                     </tr>
                     <tr class="total-row">
@@ -118,20 +118,20 @@
                         <td class="amount-cell"><strong>¥{{ report_data.operating.net|floatformat:2 }}</strong></td>
                     </tr>
                     <tr>
-                        <td colspan="2" style="font-weight: 600;">二、投资活动产生的现金流量</td>
+                        <td colspan="2" class="cfr-section-title">二、投资活动产生的现金流量</td>
                     </tr>
                     <tr>
-                        <td style="padding-left: 30px;">投资活动产生的现金流量净额</td>
+                        <td class="cfr-cell-indent">投资活动产生的现金流量净额</td>
                         <td class="amount-cell">¥{{ report_data.investing.net|floatformat:2 }}</td>
                     </tr>
                     <tr>
-                        <td colspan="2" style="font-weight: 600;">三、筹资活动产生的现金流量</td>
+                        <td colspan="2" class="cfr-section-title">三、筹资活动产生的现金流量</td>
                     </tr>
                     <tr>
-                        <td style="padding-left: 30px;">筹资活动产生的现金流量净额</td>
+                        <td class="cfr-cell-indent">筹资活动产生的现金流量净额</td>
                         <td class="amount-cell">¥{{ report_data.financing.net|floatformat:2 }}</td>
                     </tr>
-                    <tr class="total-row" style="background-color: #d4edda;">
+                    <tr class="total-row cfr-row-net">
                         <td><strong>四、现金及现金等价物净增加额</strong></td>
                         <td class="amount-cell"><strong>¥{{ report_data.net_cash_flow|floatformat:2 }}</strong></td>
                     </tr>

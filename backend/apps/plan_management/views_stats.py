@@ -14,7 +14,8 @@ CACHE_TTL = 60  # 缓存 60 秒
 def _cache_key(user, scope: str, params: dict):
     """生成缓存键"""
     # 超管用 "all"，普通用 company_id
-    company_id = getattr(getattr(user, "profile", None), "company_id", None)
+    # P0-2: 改为使用 user.company_id
+    company_id = user.company_id
     scope_key = "all" if getattr(user, "is_superuser", False) else f"c{company_id or 'none'}"
     parts = [
         scope,

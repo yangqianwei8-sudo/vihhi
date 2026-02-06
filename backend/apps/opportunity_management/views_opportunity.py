@@ -30,7 +30,10 @@ class _OpportunityFormPlaceholder(forms.Form):
     def __init__(self, *args, user=None, opportunity=None, preview_number=None, **kwargs):
         from backend.apps.system_management.models import User, Department
         super().__init__(*args, **kwargs)
-        self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
+        dept_qs = Department.objects.filter(is_active=True)
+        if getattr(user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=user.company_id)
+        self.fields['responsible_department'].queryset = dept_qs
         self.fields['responsible_person'].queryset = User.objects.filter(is_active=True)
         number = ''
         if opportunity and getattr(opportunity, 'opportunity_number', None):
@@ -560,41 +563,27 @@ def opportunity_submit_for_approval(request, opportunity_id):
 
     if request.method == 'POST':
         try:
-            from django.contrib.contenttypes.models import ContentType
-            from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalInstance
-            from backend.apps.workflow_engine.services import ApprovalEngine
-
-            content_type = ContentType.objects.get_for_model(BusinessOpportunity)
-            existing = ApprovalInstance.objects.filter(
-                content_type=content_type,
-                object_id=opportunity.id,
-                status='pending'
-            ).first()
-            if existing:
-                messages.warning(request, f'该商机已有正在进行的审批（审批编号：{existing.instance_number}）')
-                return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
-
-            try:
-                workflow = WorkflowTemplate.objects.get(code='opportunity_approval', status='active')
-            except WorkflowTemplate.DoesNotExist:
-                workflow = WorkflowTemplate.objects.filter(
-                    status='active',
-                    applicable_models__contains=['businessopportunity']
-                ).first()
-                if not workflow:
-                    messages.error(request, '商机审批流程未配置，请联系管理员运行: python manage.py setup_opportunity_approval_workflow')
-                    return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
-
+            from backend.apps.opportunity_management.services import OpportunityApprovalService
+            
+            # 使用审批服务提交审批
+            service = OpportunityApprovalService()
             comment = request.POST.get('comment', f'申请审批商机：{opportunity.name}')
-            instance = ApprovalEngine.start_approval(
-                workflow=workflow,
-                content_object=opportunity,
+            instance = service.submit_approval(
+                obj=opportunity,
                 applicant=request.user,
                 comment=comment
             )
+            
+            if not instance:
+                messages.error(request, '商机审批流程未配置，请联系管理员运行: python manage.py setup_opportunity_approval_workflow')
+                return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
+            
             opportunity.approval_status = 'pending'
             opportunity.save(update_fields=['approval_status'])
             messages.success(request, f'商机审批已提交（审批编号：{instance.instance_number}）')
+            return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
+        except ValueError as e:
+            messages.error(request, f'提交审批失败：{str(e)}')
             return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
         except Exception as e:
             import logging

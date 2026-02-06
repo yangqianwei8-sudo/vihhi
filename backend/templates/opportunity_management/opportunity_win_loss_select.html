@@ -3,6 +3,7 @@
 {% load static %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/opportunity/win-loss-list.css' %}">
 {% endblock %}
 
 {% block pm_title %}选择输赢{% endblock %}
@@ -73,14 +74,14 @@
                 <table class="list-page-table">
                     <thead>
                         <tr>
-                            <th style="width: 200px;">商机名称</th>
-                            <th style="width: 120px;">商机编号</th>
-                            <th style="width: 150px;">关联客户</th>
-                            <th style="width: 100px;">负责商务</th>
-                            <th style="width: 120px; text-align: right;">预计金额（万元）</th>
-                            <th style="width: 120px; text-align: right;">加权金额（万元）</th>
-                            <th style="width: 150px; text-align: center;">更新时间</th>
-                            <th style="width: 150px; text-align: center;">操作</th>
+                            <th class="owl-select-th-200">商机名称</th>
+                            <th class="owl-select-th-120">商机编号</th>
+                            <th class="owl-select-th-150">关联客户</th>
+                            <th class="owl-select-th-100">负责商务</th>
+                            <th class="owl-select-th-right">预计金额（万元）</th>
+                            <th class="owl-select-th-right">加权金额（万元）</th>
+                            <th class="owl-select-th-150-center">更新时间</th>
+                            <th class="owl-select-th-150-center">操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -98,14 +99,14 @@
                                 </a>
                             </td>
                             <td>{{ opportunity.business_manager.get_full_name|default:opportunity.business_manager.username }}</td>
-                            <td style="text-align: right;" class="info-value-numeric">
+                            <td class="owl-td-right info-value-numeric">
                                 {{ opportunity.estimated_amount|floatformat:2|default:'未填写' }}
                             </td>
-                            <td style="text-align: right;" class="info-value-numeric info-value-bold">
+                            <td class="owl-td-right info-value-numeric info-value-bold">
                                 {{ opportunity.weighted_amount|floatformat:2|default:'未填写' }}
                             </td>
-                            <td style="text-align: center;">{{ opportunity.updated_time|date:'Y-m-d H:i' }}</td>
-                            <td style="text-align: center;">
+                            <td class="owl-td-center">{{ opportunity.updated_time|date:'Y-m-d H:i' }}</td>
+                            <td class="owl-td-center">
                                 <a href="{% url 'opportunity_pages:opportunity_mark_win_loss' opportunity.id %}?target_status={{ target_status }}"
                                    class="btn btn-sm {% if target_status == 'won' %}btn-success{% else %}btn-danger{% endif %}">
                                     <i class="bi {% if target_status == 'won' %}bi-check-circle{% else %}bi-x-circle{% endif %}"></i>
@@ -115,7 +116,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" style="text-align: center; padding: 40px;">
+                            <td colspan="8" class="owl-select-empty">
                                 <p class="text-muted">暂无可以标记为{{ status_label }}的商机（显示状态为"商务谈判"或有商务洽谈记录的商机）</p>
                             </td>
                         </tr>

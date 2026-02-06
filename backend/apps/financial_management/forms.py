@@ -163,11 +163,15 @@ class BudgetForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         from backend.apps.system_management.models import Department
         try:
             self.fields['account_subject'].queryset = AccountSubject.objects.filter(is_active=True).order_by('code')
-            self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('name')
+            dept_qs = Department.objects.filter(is_active=True).order_by('name')
+            if request and getattr(request.user, 'company_id', None):
+                dept_qs = dept_qs.filter(company_id=request.user.company_id)
+            self.fields['department'].queryset = dept_qs
         except Exception:
             # 如果数据库连接有问题，使用默认查询集
             self.fields['account_subject'].queryset = AccountSubject.objects.none()

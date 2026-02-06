@@ -1,0 +1,89 @@
+{% extends "shared/list_page_base.html" %}
+{% load static %}
+
+{% block list_page_title %}目标列表 - 维海科技信息化管理平台{% endblock list_page_title %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">目标列表</li>
+{% endblock breadcrumb_items %}
+
+{% block list_page_actions %}
+<a href="{% url 'production_pages:goal_create' %}" class="btn btn-primary btn-sm">
+  <i class="bi bi-plus-circle"></i> 新建目标
+</a>
+{% endblock list_page_actions %}
+
+{% block list_filters_basic %}
+<div class="col list-page-filter-item" data-role="filter-field" data-filter-key="search">
+  <label class="form-label list-page-filter-label">关键词</label>
+  <input type="text" name="search" class="form-control form-control-sm"
+         placeholder="搜索目标名称..."
+         value="{{ search|default:'' }}">
+</div>
+<div class="col list-page-filter-item" data-role="filter-field" data-filter-key="status">
+  <label class="form-label list-page-filter-label">状态</label>
+  <select name="status" class="form-select form-select-sm">
+    <option value="">全部状态</option>
+    <option value="not_started" {% if status_filter == 'not_started' %}selected{% endif %}>未开始</option>
+    <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>进行中</option>
+    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>已完成</option>
+    <option value="terminated" {% if status_filter == 'terminated' %}selected{% endif %}>已终止</option>
+  </select>
+</div>
+{% endblock list_filters_basic %}
+
+{% block list_table_headers %}
+<th>目标名称</th>
+<th>状态</th>
+<th>起止时间</th>
+<th>操作</th>
+{% endblock list_table_headers %}
+
+{% block list_table_rows %}
+{% for goal in goals %}
+<tr>
+  <td>
+    <a href="{% url 'production_pages:goal_detail' goal.id %}">
+      {{ goal.title }}
+    </a>
+  </td>
+  <td>
+    {% if goal.status == 'not_started' %}
+      <span class="list-badge list-badge-draft">未开始</span>
+    {% elif goal.status == 'in_progress' %}
+      <span class="list-badge list-badge-in_progress">进行中</span>
+    {% elif goal.status == 'completed' %}
+      <span class="list-badge list-badge-completed">已完成</span>
+    {% elif goal.status == 'terminated' %}
+      <span class="list-badge list-badge-archived">已终止</span>
+    {% else %}
+      <span class="list-badge">{{ goal.get_status_display }}</span>
+    {% endif %}
+  </td>
+  <td>
+    {% if goal.start_date and goal.end_date %}
+      {{ goal.start_date|date:"Y-m-d" }} 至 {{ goal.end_date|date:"Y-m-d" }}
+    {% elif goal.start_date %}
+      {{ goal.start_date|date:"Y-m-d" }} 起
+    {% elif goal.end_date %}
+      至 {{ goal.end_date|date:"Y-m-d" }}
+    {% else %}
+      -
+    {% endif %}
+  </td>
+  <td>
+    <div class="list-actions">
+      <a href="{% url 'production_pages:goal_detail' goal.id %}" class="list-btn" title="查看">查看</a>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="4" class="list-empty">
+    <div class="list-empty-icon">📋</div>
+    <div class="list-empty-text">暂无目标数据</div>
+    <div class="list-empty-hint">请创建第一个目标开始使用</div>
+  </td>
+</tr>
+{% endfor %}
+{% endblock list_table_rows %}

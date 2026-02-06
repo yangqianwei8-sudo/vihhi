@@ -10,6 +10,7 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/layouts/file-template-manage.css' %}">
 <style>
 .list-page-container {
     padding: 12px !important;
@@ -69,7 +70,7 @@
         <div class="card-body">
             <form method="get" class="d-flex gap-2 align-items-center">
                 <label class="form-label mb-0">选择阶段：</label>
-                <select name="stage" class="form-select form-select-sm" style="width: 200px;" onchange="this.form.submit()">
+                <select name="stage" class="form-select form-select-sm ftm-select-stage-w" data-action="submit-parent-form">
                     <option value="all" {% if show_all %}selected{% endif %}>全部</option>
                     {% for code, name in stages.items %}
                         <option value="{{ code }}" {% if code == stage_code and not show_all %}selected{% endif %}>{{ name }}</option>
@@ -98,7 +99,7 @@
                        placeholder="模板名称、代码、描述..."
                        value="{{ search_keyword }}">
             </div>
-            <div style="width: 150px;">
+            <div class="ftm-filter-status-w">
                 <label class="form-label small mb-1">状态</label>
                 <select name="status" class="form-select form-select-sm">
                     <option value="">全部</option>
@@ -122,18 +123,18 @@
             <table class="table table-hover table-bordered">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 5%;">#</th>
+                        <th class="ftm-th-5">#</th>
                         {% if show_all %}
-                        <th style="width: 12%;">阶段</th>
+                        <th class="ftm-th-12">阶段</th>
                         {% endif %}
-                        <th style="width: 20%;">模板名称</th>
-                        <th style="width: 15%;">模板代码</th>
-                        <th style="width: 15%;">关联分类</th>
-                        <th style="width: 15%;">模板文件</th>
-                        <th style="width: 8%;">排序</th>
-                        <th style="width: 8%;">状态</th>
-                        <th style="width: 10%;">创建时间</th>
-                        <th style="width: 4%;">操作</th>
+                        <th class="ftm-th-20">模板名称</th>
+                        <th class="ftm-th-15">模板代码</th>
+                        <th class="ftm-th-15">关联分类</th>
+                        <th class="ftm-th-15">模板文件</th>
+                        <th class="ftm-th-8">排序</th>
+                        <th class="ftm-th-8">状态</th>
+                        <th class="ftm-th-10">创建时间</th>
+                        <th class="ftm-th-4">操作</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -254,7 +255,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="modal_stage" class="form-label required-field">阶段</label>
-                                <select class="form-select" id="modal_stage" name="stage" required onchange="updateCategoryOptions(this.value)">
+                                <select class="form-select" id="modal_stage" name="stage" required>
                                     <option value="">请选择阶段</option>
                                     {% for code, name in stages.items %}
                                         <option value="{{ code }}" {% if code == stage_code and not show_all %}selected{% endif %}>{{ name }}</option>
@@ -281,7 +282,7 @@
                                     <option value="">不关联分类</option>
                                     {% for code, categories in categories_by_stage.items %}
                                         {% for category in categories %}
-                                            <option value="{{ category.id }}" data-stage="{{ code }}" style="display: none;">{{ category.name }}</option>
+                                            <option value="{{ category.id }}" data-stage="{{ code }}" class="d-none">{{ category.name }}</option>
                                         {% endfor %}
                                     {% endfor %}
                                 </select>
@@ -342,50 +343,7 @@
     </div>
 </div>
 
-<script>
-// 更新分类选项
-function updateCategoryOptions(stageCode) {
-    const categorySelect = document.getElementById('modal_category');
-    const options = categorySelect.querySelectorAll('option[data-stage]');
-
-    // 隐藏所有选项
-    options.forEach(option => {
-        option.style.display = 'none';
-    });
-
-    // 显示当前阶段的选项
-    if (stageCode) {
-        options.forEach(option => {
-            if (option.getAttribute('data-stage') === stageCode) {
-                option.style.display = '';
-            }
-        });
-    }
-
-    // 重置选择
-    categorySelect.value = '';
-}
-
-// 弹窗关闭时重置表单
-document.getElementById('createTemplateModal').addEventListener('hidden.bs.modal', function () {
-    document.getElementById('createTemplateForm').reset();
-    // 恢复默认选中当前阶段（如果不是"全部"）
-    {% if not show_all %}
-    const stageSelect = document.getElementById('modal_stage');
-    stageSelect.value = '{{ stage_code }}';
-    updateCategoryOptions('{{ stage_code }}');
-    {% endif %}
-    document.getElementById('modal_is_active').checked = true;
-});
-
-// 弹窗打开时设置默认阶段
-document.getElementById('createTemplateModal').addEventListener('show.bs.modal', function () {
-    {% if not show_all %}
-    const stageSelect = document.getElementById('modal_stage');
-    stageSelect.value = '{{ stage_code }}';
-    updateCategoryOptions('{{ stage_code }}');
-    {% endif %}
-});
-</script>
+<script type="application/json" id="fileTemplateManageConfig">{"stageCode": "{{ stage_code|default:''|escapejs }}", "showAll": {{ show_all|yesno:"true,false" }}}</script>
+<script src="{% static 'js/document/file_template_manage.js' %}"></script>
 {% endif %}
 {% endblock %}

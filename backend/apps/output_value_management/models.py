@@ -2,8 +2,81 @@
 # 从settlement_center迁移而来
 
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 from backend.apps.system_management.models import User
+
+
+class OutputValuePolicy(models.Model):
+    """
+    产值口径配置（唯一权威）。
+    全系统仅允许一条 enabled=True 的 policy 生效；计算内核从本表读取所有可变口径。
+    """
+    name = models.CharField(max_length=100, default='V1 默认口径', verbose_name='口径名称')
+    # 服务类型权重：JSON { "code": "0.02", "name": "0.02" }，支持 code/name 双键
+    service_type_weights = models.JSONField(
+        default=dict,
+        verbose_name='服务类型权重',
+        help_text='JSON：{ "转化阶段": "0.02", "conversion": "0.02", ... }，绝对折算率',
+    )
+    stage_weight = models.DecimalField(
+        max_digits=10, decimal_places=4, default='1.0',
+        verbose_name='阶段权重', help_text='V1 默认 1.0',
+    )
+    event_modifier_min = models.DecimalField(
+        max_digits=10, decimal_places=4, default='0.2',
+        verbose_name='事件修正系数下限',
+    )
+    event_modifier_max = models.DecimalField(
+        max_digits=10, decimal_places=4, default='1.2',
+        verbose_name='事件修正系数上限',
+    )
+    confidence_high_threshold = models.DecimalField(
+        max_digits=10, decimal_places=4, default='0.30',
+        verbose_name='confidence 高阈值', help_text='milestone_weight >= 此值视为 high',
+    )
+    enabled = models.BooleanField(default=True, verbose_name='是否生效')
+    effective_from = models.DateTimeField(null=True, blank=True, verbose_name='生效起始时间（可选）')
+    updated_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name='最后修改人',
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    created_at = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+
+    class Meta:
+        db_table = 'output_value_policy'
+        verbose_name = '产值口径配置'
+        verbose_name_plural = verbose_name
+        ordering = ['-updated_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['enabled'],
+                condition=Q(enabled=True),
+                name='output_value_policy_single_enabled',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.name} (enabled={self.enabled})'
+
+    @classmethod
+    def get_active(cls):
+        """
+        返回当前唯一生效的口径配置。未配置时抛出 RuntimeError，提示在 Admin 配置。
+        """
+        policy = cls.objects.filter(enabled=True).first()
+        if not policy:
+            raise RuntimeError(
+                '未配置产值口径：请在 Django Admin → 产值管理 → 产值口径配置 中新增一条并勾选「是否生效」。'
+                '或执行：python manage.py seed_output_value_policy'
+            )
+        return policy
+
+    def save(self, *args, **kwargs):
+        if self.enabled:
+            OutputValuePolicy.objects.filter(enabled=True).exclude(pk=self.pk).update(enabled=False)
+        super().save(*args, **kwargs)
 
 
 class OutputValueStage(models.Model):

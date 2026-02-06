@@ -852,8 +852,7 @@ class Plan(models.Model):
     company = models.ForeignKey(
         'system_management.OurCompany',
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
+        null=False,
         related_name='plans',
         verbose_name='公司'
     )
@@ -1806,6 +1805,28 @@ class PlanDecision(models.Model):
         """判断是否为待处理状态"""
         return self.decided_at is None
     
+    def save(self, *args, **kwargs):
+        """
+        保存方法：禁止创建新的 PlanDecision（旧审批系统已退场）
+        
+        只允许：
+        1. 更新已存在的 PlanDecision（历史数据处理）
+        2. 通过特殊标志绕过检查（仅用于数据迁移等特殊情况）
+        """
+        # 如果是新创建（没有 pk），禁止创建
+        if not self.pk:
+            from django.core.exceptions import ValidationError
+            # 检查是否有特殊标志允许创建（仅用于数据迁移、测试等特殊情况）
+            allow_create = kwargs.pop('_allow_create_for_migration', False) or kwargs.pop('_allow_create_for_test', False)
+            if not allow_create:
+                raise ValidationError(
+                    'PlanDecision 已退场，禁止创建新的决策记录。'
+                    '所有审批必须通过 WorkflowEngine（审批引擎）进行。'
+                    '如需创建 PlanDecision，请使用 _allow_create_for_migration=True（数据迁移）或 _allow_create_for_test=True（测试）。'
+                )
+        
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         decision_text = self.get_decision_display() if self.decision else '待处理'
         return f"{self.plan.plan_number} - {self.get_request_type_display()} - {decision_text}"
@@ -2166,4 +2187,164 @@ class Attachment(models.Model):
     def file_type(self):
         """文件类型属性（用于模板）"""
         return self.get_file_type()
+
+
+# ==================== 产值依据：证据事件与里程碑完成（只读计划管理） ====================
+
+# 门禁：仅评估服务（evaluate_*）可写 PlanOutputMilestoneCompletion；view/form 禁止直写。
+import threading
+_plan_completion_write_allowed = threading.local()
+
+def _get_completion_write_allowed():
+    return getattr(_plan_completion_write_allowed, 'value', False)
+
+def _set_completion_write_allowed(value):
+    _plan_completion_write_allowed.value = value
+
+def allow_plan_completion_write():
+    """仅评估服务内部调用：允许当前上下文写入 PlanOutputMilestoneCompletion。"""
+    _set_completion_write_allowed(True)
+    return None
+
+def reset_plan_completion_write(token):
+    """仅评估服务内部调用：恢复门禁状态。"""
+    _set_completion_write_allowed(False)
+
+
+# 门禁：仅 record_fact_event 可写 FactEvent；禁止 objects.create / bulk_create / update_or_create 直写。可嵌套、可恢复。
+_fact_event_write_stack = threading.local()
+
+def _get_fact_event_write_allowed():
+    stack = getattr(_fact_event_write_stack, 'value', None)
+    if not stack or not isinstance(stack, list) or len(stack) == 0:
+        return False
+    return stack[-1] is True
+
+def allow_fact_event_write():
+    """仅 record_fact_event 内部调用：允许当前上下文写入 FactEvent。可嵌套。"""
+    if not hasattr(_fact_event_write_stack, 'value') or not isinstance(getattr(_fact_event_write_stack, 'value', None), list):
+        _fact_event_write_stack.value = []
+    _fact_event_write_stack.value.append(True)
+    return len(_fact_event_write_stack.value) - 1
+
+def reset_fact_event_write(token):
+    """仅 record_fact_event 内部调用：恢复门禁状态（出栈）。"""
+    stack = getattr(_fact_event_write_stack, 'value', None)
+    if isinstance(stack, list) and len(stack) > 0 and token is not None:
+        stack.pop()
+
+
+class FactEventQuerySet(models.QuerySet):
+    """阻断 bulk_create 直写。"""
+
+    def bulk_create(self, objs, *args, **kwargs):
+        from backend.apps.plan_management.models import _get_fact_event_write_allowed
+        if not _get_fact_event_write_allowed():
+            raise PermissionError(
+                'FactEvent 仅允许通过 plan_management.services.fact_event.record_fact_event 写入，禁止 bulk_create 直写。'
+            )
+        return super().bulk_create(objs, *args, **kwargs)
+
+
+class FactEventManager(models.Manager):
+    """使用 FactEventQuerySet，create/update_or_create 会经 save() 被 save() 门禁阻断。"""
+
+    def get_queryset(self):
+        return FactEventQuerySet(self.model, using=self._db)
+
+
+class FactEvent(models.Model):
+    """
+    统一证据事件表。必须通过 plan_management.services.fact_event.record_fact_event 写入。
+    模型层门禁：直写 FactEvent.objects.create / bulk_create / update_or_create 将抛 PermissionError。
+    """
+    type = models.CharField(max_length=100, db_index=True, verbose_name='事件类型')
+    ref_model = models.CharField(max_length=100, blank=True, verbose_name='关联模型')
+    ref_id = models.CharField(max_length=100, blank=True, db_index=True, verbose_name='关联ID')
+    occurred_at = models.DateTimeField(default=timezone.now, db_index=True, verbose_name='发生时间')
+    payload = models.JSONField(default=dict, blank=True, verbose_name='扩展数据')
+    source_app = models.CharField(max_length=50, blank=True, db_index=True, verbose_name='来源应用')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='入库时间')
+    idempotency_key = models.CharField(max_length=255, null=True, blank=True, db_index=True, verbose_name='幂等键')
+
+    objects = FactEventManager()
+
+    class Meta:
+        db_table = 'plan_fact_event'
+        verbose_name = '证据事件'
+        verbose_name_plural = verbose_name
+        ordering = ['-occurred_at']
+        indexes = [
+            models.Index(fields=['type', '-occurred_at']),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not _get_fact_event_write_allowed():
+            raise PermissionError(
+                'FactEvent 仅允许通过 plan_management.services.fact_event.record_fact_event 写入，禁止直写。'
+            )
+        super().save(*args, **kwargs)
+
+
+class MilestoneEvidenceRule(models.Model):
+    """
+    里程碑证据规则：满足 required_event_types 等条件时，可将对应产值里程碑标记为完成。
+    计划管理评估后写 PlanOutputMilestoneCompletion，产值模块只读完成状态。
+    """
+    milestone_code = models.CharField(max_length=100, db_index=True, verbose_name='产值里程碑编码')
+    required_event_types = models.JSONField(
+        default=list,
+        verbose_name='所需事件类型列表',
+        help_text='如 ["consult_submit", "review_done"]'
+    )
+    threshold = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        verbose_name='阈值（可选）', help_text='可选，如完成度百分比阈值'
+    )
+    enabled = models.BooleanField(default=True, verbose_name='是否启用')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'plan_milestone_evidence_rule'
+        verbose_name = '里程碑证据规则'
+        verbose_name_plural = verbose_name
+
+
+class PlanOutputMilestoneCompletion(models.Model):
+    """
+    产值里程碑完成记录（计划管理维护）。产值计算只读此表判定里程碑是否完成。
+    仅允许由评估服务（evaluate_milestone_completion）写入，禁止 view/form 直接 create/update。
+    """
+    opportunity_id = models.PositiveIntegerField(db_index=True, verbose_name='商机ID')
+    milestone_code = models.CharField(max_length=100, db_index=True, verbose_name='产值里程碑编码')
+    completed_at = models.DateTimeField(default=timezone.now, verbose_name='完成时间')
+    evidence_snapshot = models.JSONField(default=dict, blank=True, verbose_name='证据快照')
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        verbose_name='创建人',
+    )
+    created_via = models.CharField(max_length=50, default='rule_engine', verbose_name='创建途径')
+    rule_code = models.CharField(max_length=100, null=True, blank=True, verbose_name='命中规则编码')
+    rule_snapshot = models.JSONField(default=dict, blank=True, verbose_name='规则快照')
+
+    class Meta:
+        db_table = 'plan_output_milestone_completion'
+        verbose_name = '产值里程碑完成记录'
+        verbose_name_plural = verbose_name
+        unique_together = [['opportunity_id', 'milestone_code']]
+        indexes = [
+            models.Index(fields=['opportunity_id', 'milestone_code']),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not _get_completion_write_allowed():
+            raise PermissionError(
+                'PlanOutputMilestoneCompletion 仅允许由评估服务（evaluate_milestone_completion）写入，禁止 view/form 直接 create/update。'
+            )
+        super().save(*args, **kwargs)
 

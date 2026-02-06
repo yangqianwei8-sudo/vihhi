@@ -1,6 +1,11 @@
 {% extends "shared/detail_base.html" %}
 {% load static %}
 
+{% block module_styles %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/administrative/loan-detail.css' %}">
+{% endblock %}
+
 {% block detail_title %}借款申请详情 - {{ loan.application_number }}{% endblock %}
 {% block detail_subtitle %}查看借款申请的详细信息{% endblock %}
 
@@ -109,7 +114,7 @@
           <div class="detail-field">
             <label class="detail-field-label">借款金额</label>
             <div class="detail-field-value">
-              <strong class="text-primary" style="font-size: 18px;">¥{{ loan.loan_amount|floatformat:2 }}</strong>
+              <strong class="text-primary loan-detail-amount-lg">¥{{ loan.loan_amount|floatformat:2 }}</strong>
             </div>
           </div>
         </div>
@@ -186,7 +191,7 @@
           <div class="detail-field">
             <label class="detail-field-label">剩余未还</label>
             <div class="detail-field-value">
-              <span class="text-danger fw-bold" style="font-size: 18px;">¥{{ loan.remaining_amount|floatformat:2 }}</span>
+              <span class="text-danger fw-bold loan-detail-amount-lg">¥{{ loan.remaining_amount|floatformat:2 }}</span>
             </div>
           </div>
         </div>
@@ -252,7 +257,7 @@
         <div class="col-md-12 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">借款事由</label>
-            <div class="detail-field-value" style="white-space: pre-wrap;">{{ loan.loan_reason }}</div>
+            <div class="detail-field-value loan-detail-pre-wrap">{{ loan.loan_reason }}</div>
           </div>
         </div>
       </div>
@@ -263,7 +268,7 @@
         <div class="col-md-12 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">备注信息</label>
-            <div class="detail-field-value" style="white-space: pre-wrap;">{{ loan.notes }}</div>
+            <div class="detail-field-value loan-detail-pre-wrap">{{ loan.notes }}</div>
           </div>
         </div>
       </div>
@@ -333,11 +338,11 @@
       <table class="detail-table">
         <thead>
           <tr>
-            <th style="width: 60px;">序号</th>
-            <th style="width: 120px;">审批节点</th>
-            <th style="width: 120px;">审批人</th>
-            <th style="width: 100px;">审批结果</th>
-            <th style="width: 160px;">审批时间</th>
+            <th class="loan-detail-th-60">序号</th>
+            <th class="loan-detail-th-120">审批节点</th>
+            <th class="loan-detail-th-120">审批人</th>
+            <th class="loan-detail-th-100">审批结果</th>
+            <th class="loan-detail-th-160">审批时间</th>
             <th>审批意见</th>
           </tr>
         </thead>
@@ -376,7 +381,7 @@
         <tbody>
           {% if loan.approver %}
           <tr>
-            <th style="width: 150px;">审批人</th>
+            <th class="loan-detail-th-150">审批人</th>
             <td>{{ loan.approver.get_full_name|default:loan.approver.username }}</td>
           </tr>
           {% endif %}
@@ -389,7 +394,7 @@
           {% if loan.approval_notes %}
           <tr>
             <th>审批意见</th>
-            <td style="white-space: pre-wrap;">{{ loan.approval_notes }}</td>
+            <td class="loan-detail-pre-wrap">{{ loan.approval_notes }}</td>
           </tr>
           {% endif %}
         </tbody>
@@ -417,7 +422,7 @@
         <tbody>
           {% if loan.paid_by %}
           <tr>
-            <th style="width: 150px;">放款人</th>
+            <th class="loan-detail-th-150">放款人</th>
             <td>{{ loan.paid_by.get_full_name|default:loan.paid_by.username }}</td>
           </tr>
           {% endif %}

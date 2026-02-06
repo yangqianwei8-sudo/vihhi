@@ -27,7 +27,7 @@
             {{ task.client.name }}
           </a>
           {% else %}
-          <span style="color: #999999;">未指定</span>
+          <span class="crct-muted">未指定</span>
           {% endif %}
         </td>
         <td>
@@ -40,28 +40,28 @@
         </td>
         <td>
           {% if task.priority == 'high' %}
-          <span class="list-badge" style="background: #842029; color: #FFFFFF;">高</span>
+          <span class="list-badge crct-priority-high">高</span>
           {% elif task.priority == 'medium' %}
-          <span class="list-badge" style="background: #E8E8E8; color: #333333;">中</span>
+          <span class="list-badge crct-priority-medium">中</span>
           {% elif task.priority == 'low' %}
-          <span class="list-badge" style="background: #F5F5F5; color: #999999;">低</span>
+          <span class="list-badge crct-priority-low">低</span>
           {% else %}
-          <span style="color: #999999;">—</span>
+          <span class="crct-muted">—</span>
           {% endif %}
         </td>
         <td>
           {% for user in task.responsible_users.all %}
             {{ user.get_full_name|default:user.username }}{% if not forloop.last %}, {% endif %}
           {% empty %}
-          <span style="color: #999999;">未指定</span>
+          <span class="crct-muted">未指定</span>
           {% endfor %}
         </td>
         <td>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="flex: 1; height: 20px; background: #E0E0E0; border-radius: 4px; overflow: hidden; max-width: 80px;">
-              <div style="height: 100%; width: {{ task.progress }}%; background: #2563EB; transition: width 0.3s;"></div>
+          <div class="crct-progress-wrap">
+            <div class="crct-progress-track">
+              <div class="crct-progress-fill" style="width: {{ task.progress }}%;"></div>
             </div>
-            <span style="font-size: 12px; color: #666666;">{{ task.progress }}%</span>
+            <span class="crct-progress-text">{{ task.progress }}%</span>
           </div>
         </td>
         <td>{{ task.due_date|date:"Y-m-d H:i"|default:"—" }}</td>

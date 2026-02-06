@@ -109,9 +109,13 @@ class EmployeeForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
-        # 动态加载部门和用户
-        self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('name')
+        # 动态加载部门和用户（P0-3: 部门按当前用户公司过滤）
+        dept_qs = Department.objects.filter(is_active=True).order_by('name')
+        if request and getattr(request.user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=request.user.company_id)
+        self.fields['department'].queryset = dept_qs
         self.fields['user'].queryset = User.objects.filter(is_active=True).order_by('username')
         self.fields['user'].required = False
         self.fields['resignation_date'].required = False
@@ -490,10 +494,14 @@ class EmployeeMovementForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         self.fields['employee'].queryset = Employee.objects.filter(status__in=['active', 'suspended']).order_by('name')
-        self.fields['old_department'].queryset = Department.objects.filter(is_active=True).order_by('name')
-        self.fields['new_department'].queryset = Department.objects.filter(is_active=True).order_by('name')
+        dept_qs = Department.objects.filter(is_active=True).order_by('name')
+        if request and getattr(request.user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=request.user.company_id)
+        self.fields['old_department'].queryset = dept_qs
+        self.fields['new_department'].queryset = dept_qs
         self.fields['old_department'].required = False
         self.fields['old_position'].required = False
         self.fields['old_salary'].required = False
@@ -659,8 +667,12 @@ class RecruitmentRequirementForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
-        self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('name')
+        dept_qs = Department.objects.filter(is_active=True).order_by('name')
+        if request and getattr(request.user, 'company_id', None):
+            dept_qs = dept_qs.filter(company_id=request.user.company_id)
+        self.fields['department'].queryset = dept_qs
         self.fields['salary_range_min'].required = False
         self.fields['salary_range_max'].required = False
         self.fields['publish_date'].required = False

@@ -375,6 +375,22 @@ class CustomerForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        # 基模 create_form_base 规定：基本信息卡片固定三字段（只读）
+        self.fields['responsible_department'] = forms.CharField(
+            required=False,
+            label='所属部门',
+            widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'placeholder': '系统自动填充'})
+        )
+        self.fields['responsible_person'] = forms.CharField(
+            required=False,
+            label='负责人',
+            widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'placeholder': '系统自动填充'})
+        )
+        self.fields['form_number'] = forms.CharField(
+            required=False,
+            label='表单编号',
+            widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'placeholder': '系统自动生成'})
+        )
         # 设置空选项
         self.fields['grade'].empty_label = '-- 自动计算 --'
         # client_type 设为必填，不允许为空
@@ -1080,50 +1096,15 @@ class VisitPlanForm(forms.ModelForm):
         permission_set = kwargs.pop('permission_set', None)
         super().__init__(*args, **kwargs)
         
-        # 根据用户过滤客户：只显示该用户作为负责人的、已审批通过的客户
+        # 根据用户过滤客户：只显示该用户作为负责人的客户（客户无需审批）
         if user:
-            from django.contrib.contenttypes.models import ContentType
-            from backend.apps.workflow_engine.models import ApprovalInstance
-            
-            # 1. 只显示该用户作为负责人的客户
             base_queryset = Client.objects.filter(
                 is_active=True,
                 responsible_user=user
             )
-            
-            # 2. 只显示已审批通过的客户（通过 ApprovalInstance 判断）
-            client_content_type = ContentType.objects.get_for_model(Client)
-            approved_instance_ids = ApprovalInstance.objects.filter(
-                content_type=client_content_type,
-                status='approved'
-            ).values_list('object_id', flat=True)
-            
-            # 只显示有审批通过记录的客户
-            if approved_instance_ids:
-                approved_clients = base_queryset.filter(id__in=approved_instance_ids)
-                self.fields['client'].queryset = approved_clients.distinct().order_by('name')
-            else:
-                # 如果没有审批通过的客户，显示空列表
-                self.fields['client'].queryset = Client.objects.none()
+            self.fields['client'].queryset = base_queryset.distinct().order_by('name')
         else:
-            # 没有用户信息，显示所有已审批通过的激活客户
-            from django.contrib.contenttypes.models import ContentType
-            from backend.apps.workflow_engine.models import ApprovalInstance
-            
-            client_content_type = ContentType.objects.get_for_model(Client)
-            approved_instance_ids = ApprovalInstance.objects.filter(
-                content_type=client_content_type,
-                status='approved'
-            ).values_list('object_id', flat=True)
-            
-            if approved_instance_ids:
-                approved_clients = Client.objects.filter(
-                    is_active=True,
-                    id__in=approved_instance_ids
-                )
-                self.fields['client'].queryset = approved_clients.distinct().order_by('name')
-            else:
-                self.fields['client'].queryset = Client.objects.none()
+            self.fields['client'].queryset = Client.objects.filter(is_active=True).order_by('name')
         
         self.fields['client'].empty_label = '-- 选择客户 --'
         
@@ -1266,50 +1247,15 @@ class VisitPlanWithChecklistForm(forms.ModelForm):
             self.fields['department'].widget.attrs['disabled'] = True
             self.fields['responsible_user'].widget.attrs['disabled'] = True
         
-        # 根据用户过滤客户：只显示该用户作为负责人的、已审批通过的客户
+        # 根据用户过滤客户：只显示该用户作为负责人的客户（客户无需审批）
         if user:
-            from django.contrib.contenttypes.models import ContentType
-            from backend.apps.workflow_engine.models import ApprovalInstance
-            
-            # 1. 只显示该用户作为负责人的客户
             base_queryset = Client.objects.filter(
                 is_active=True,
                 responsible_user=user
             )
-            
-            # 2. 只显示已审批通过的客户（通过 ApprovalInstance 判断）
-            client_content_type = ContentType.objects.get_for_model(Client)
-            approved_instance_ids = ApprovalInstance.objects.filter(
-                content_type=client_content_type,
-                status='approved'
-            ).values_list('object_id', flat=True)
-            
-            # 只显示有审批通过记录的客户
-            if approved_instance_ids:
-                approved_clients = base_queryset.filter(id__in=approved_instance_ids)
-                self.fields['client'].queryset = approved_clients.distinct().order_by('name')
-            else:
-                # 如果没有审批通过的客户，显示空列表
-                self.fields['client'].queryset = Client.objects.none()
+            self.fields['client'].queryset = base_queryset.distinct().order_by('name')
         else:
-            # 没有用户信息，显示所有已审批通过的激活客户
-            from django.contrib.contenttypes.models import ContentType
-            from backend.apps.workflow_engine.models import ApprovalInstance
-            
-            client_content_type = ContentType.objects.get_for_model(Client)
-            approved_instance_ids = ApprovalInstance.objects.filter(
-                content_type=client_content_type,
-                status='approved'
-            ).values_list('object_id', flat=True)
-            
-            if approved_instance_ids:
-                approved_clients = Client.objects.filter(
-                    is_active=True,
-                    id__in=approved_instance_ids
-                )
-                self.fields['client'].queryset = approved_clients.distinct().order_by('name')
-            else:
-                self.fields['client'].queryset = Client.objects.none()
+            self.fields['client'].queryset = Client.objects.filter(is_active=True).order_by('name')
         
         self.fields['client'].empty_label = '-- 选择客户 --'
         
@@ -2328,6 +2274,22 @@ class CustomerFilingForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
+        # 基模 create_form_base 规定：基本信息卡片固定三字段（只读）
+        self.fields['responsible_department'] = forms.CharField(
+            required=False,
+            label='所属部门',
+            widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'placeholder': '系统自动填充'})
+        )
+        self.fields['responsible_person'] = forms.CharField(
+            required=False,
+            label='负责人',
+            widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'placeholder': '系统自动填充'})
+        )
+        self.fields['form_number'] = forms.CharField(
+            required=False,
+            label='表单编号',
+            widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'placeholder': '系统自动生成'})
+        )
         # 设置字段标签
         self.fields['client'].label = '客户'
         self.fields['filing_date'].label = '备案日期'
@@ -2393,15 +2355,16 @@ class FirstVisitForm(forms.ModelForm):
     class Meta:
         model = VisitPlan
         fields = [
-            'client', 'plan_date', 'plan_title', 'plan_purpose', 'location', 'related_opportunity'
+            'department', 'responsible_user', 'client', 'plan_date', 'plan_title', 'plan_purpose', 'location'
         ]
         widgets = {
+            'department': forms.Select(attrs={'class': 'form-select', 'disabled': True, 'id': 'id_department'}),
+            'responsible_user': forms.Select(attrs={'class': 'form-select', 'disabled': True, 'id': 'id_responsible_user'}),
             'client': forms.Select(attrs={'class': 'form-select', 'required': True}),
             'plan_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'required': True}),
             'plan_title': forms.TextInput(attrs={'class': 'form-control', 'required': True, 'placeholder': '请输入拜访标题'}),
             'plan_purpose': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'required': True, 'placeholder': '请输入拜访目的'}),
             'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '拜访地点'}),
-            'related_opportunity': forms.Select(attrs={'class': 'form-select'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -2409,56 +2372,41 @@ class FirstVisitForm(forms.ModelForm):
         permission_set = kwargs.pop('permission_set', None)
         super().__init__(*args, **kwargs)
         
+        # 所属部门、负责人：默认当前用户部门与当前用户，只读（disabled 不随 POST 提交，用 initial 在 save 时写回）
+        if user:
+            from backend.apps.system_management.models import Department, User
+            if getattr(user, 'department', None):
+                dept_id = user.department.id
+                self.fields['department'].initial = dept_id
+                self.fields['department'].queryset = Department.objects.filter(id=dept_id)
+            else:
+                dept_id = None
+                self.fields['department'].queryset = Department.objects.none()
+            self.fields['responsible_user'].initial = user.id
+            self.fields['responsible_user'].queryset = User.objects.filter(id=user.id)
+            self.fields['department'].widget.attrs['disabled'] = True
+            self.fields['responsible_user'].widget.attrs['disabled'] = True
+            self.initial.setdefault('department', dept_id)
+            self.initial.setdefault('responsible_user', user.id)
+        
         # 设置字段标签
+        self.fields['department'].label = '所属部门'
+        self.fields['responsible_user'].label = '负责人'
         self.fields['client'].label = '客户'
         self.fields['plan_date'].label = '拜访日期'
         self.fields['plan_title'].label = '拜访标题'
         self.fields['plan_purpose'].label = '拜访目的'
         self.fields['location'].label = '拜访地点'
-        self.fields['related_opportunity'].label = '关联商机'
         
-        # 根据用户过滤客户：只显示该用户作为负责人的、已审批通过的客户
+        # 根据用户过滤客户：只显示该用户作为负责人的客户（客户无需审批）
         if user:
-            from django.contrib.contenttypes.models import ContentType
-            from backend.apps.workflow_engine.models import ApprovalInstance
-            
-            # 只显示该用户作为负责人的客户
             base_queryset = Client.objects.filter(
                 is_active=True,
                 responsible_user=user
             )
-            
-            # 只显示已审批通过的客户
-            client_content_type = ContentType.objects.get_for_model(Client)
-            approved_instance_ids = ApprovalInstance.objects.filter(
-                content_type=client_content_type,
-                status='approved'
-            ).values_list('object_id', flat=True)
-            
-            if approved_instance_ids:
-                approved_clients = base_queryset.filter(id__in=approved_instance_ids)
-                self.fields['client'].queryset = approved_clients.distinct().order_by('name')
-            else:
-                self.fields['client'].queryset = Client.objects.none()
+            self.fields['client'].queryset = base_queryset.distinct().order_by('name')
         else:
-            # 没有用户信息，显示所有已审批通过的激活客户
-            from django.contrib.contenttypes.models import ContentType
-            from backend.apps.workflow_engine.models import ApprovalInstance
-            
-            client_content_type = ContentType.objects.get_for_model(Client)
-            approved_instance_ids = ApprovalInstance.objects.filter(
-                content_type=client_content_type,
-                status='approved'
-            ).values_list('object_id', flat=True)
-            
-            if approved_instance_ids:
-                approved_clients = Client.objects.filter(
-                    is_active=True,
-                    id__in=approved_instance_ids
-                )
-                self.fields['client'].queryset = approved_clients.distinct().order_by('name')
-            else:
-                self.fields['client'].queryset = Client.objects.none()
+            self.fields['client'].queryset = Client.objects.filter(is_active=True).order_by('name')
         
         self.fields['client'].empty_label = '-- 选择客户 --'
         
@@ -2466,11 +2414,6 @@ class FirstVisitForm(forms.ModelForm):
         from datetime import date
         today = date.today()
         self.fields['plan_date'].initial = today
-        
-        # 关联商机会根据选择的客户动态过滤（在模板中通过 JavaScript 实现）
-        self.fields['related_opportunity'].queryset = BusinessOpportunity.objects.none()
-        self.fields['related_opportunity'].empty_label = '-- 请先选择客户 (可选) --'
-        self.fields['related_opportunity'].required = False
         
         # 设置默认标题和目的
         if not self.instance or not self.instance.pk:
@@ -2511,16 +2454,22 @@ class FirstVisitForm(forms.ModelForm):
     
     def save(self, commit=True):
         instance = super().save(commit=False)
-        
+        # disabled 字段不从 POST 提交，从 initial 或 data 恢复
+        if hasattr(self, 'initial') and 'department' in self.initial:
+            instance.department_id = self.initial['department']
+        elif hasattr(self, 'data') and 'department' in self.data:
+            instance.department_id = self.data.get('department')
+        if hasattr(self, 'initial') and 'responsible_user' in self.initial:
+            instance.responsible_user_id = self.initial['responsible_user']
+        elif hasattr(self, 'data') and 'responsible_user' in self.data:
+            instance.responsible_user_id = self.data.get('responsible_user')
         # 设置状态为已计划
         instance.status = 'planned'
-        
         # 如果没有提供标题，自动生成
         if not instance.plan_title:
             client_name = instance.client.name if instance.client else '客户'
             plan_date_str = instance.plan_date.strftime('%Y-%m-%d') if instance.plan_date else ''
             instance.plan_title = f"{client_name} - {plan_date_str} 首次拜访"
-        
         if commit:
             instance.save()
         return instance

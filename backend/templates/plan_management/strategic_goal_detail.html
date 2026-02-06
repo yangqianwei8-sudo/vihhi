@@ -1,6 +1,11 @@
 {% extends "shared/detail_base.html" %}
 {% load static %}
 
+{% block module_styles %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/plan/strategic-goal-detail.css' %}">
+{% endblock %}
+
 {% block detail_title %}目标详情{% endblock %}
 {% block detail_subtitle %}{{ goal.name }}{% endblock %}
 
@@ -246,7 +251,7 @@
     <div class="col-md-12 detail-field-wrapper">
       <div class="detail-field">
         <label class="detail-field-label">目标描述</label>
-        <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+        <div class="detail-field-value detail-field-value-pre">
           {{ goal.description }}
         </div>
       </div>
@@ -262,7 +267,7 @@
     <div class="col-md-12 detail-field-wrapper">
       <div class="detail-field">
         <label class="detail-field-label">目标背景</label>
-        <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+        <div class="detail-field-value detail-field-value-pre">
           {{ goal.background }}
         </div>
       </div>
@@ -278,7 +283,7 @@
     <div class="col-md-12 detail-field-wrapper">
       <div class="detail-field">
         <label class="detail-field-label">目标意义</label>
-        <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+        <div class="detail-field-value detail-field-value-pre">
           {{ goal.significance }}
         </div>
       </div>
@@ -294,7 +299,7 @@
     <div class="col-md-12 detail-field-wrapper">
       <div class="detail-field">
         <label class="detail-field-label">权重说明</label>
-        <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+        <div class="detail-field-value detail-field-value-pre">
           {{ goal.weight_description }}
         </div>
       </div>
@@ -310,7 +315,7 @@
     <div class="col-md-12 detail-field-wrapper">
       <div class="detail-field">
         <label class="detail-field-label">备注</label>
-        <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+        <div class="detail-field-value detail-field-value-pre">
           {{ goal.notes }}
         </div>
       </div>
@@ -331,7 +336,7 @@
   {# 目标分解、目标跟踪、目标调整已移至页头操作区 #}
   {# 发布目标 #}
   {% if can_publish %}
-  <form method="post" action="{% url 'plan_pages:strategic_goal_detail' goal.id %}" style="display: inline;">
+  <form method="post" action="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="d-inline">
     {% csrf_token %}
     <button type="submit" name="publish_goal" class="btn btn-success">
       <i class="fas fa-paper-plane"></i>
@@ -342,7 +347,7 @@
 
   {# 接收目标 #}
   {% if can_accept %}
-  <form method="post" action="{% url 'plan_pages:strategic_goal_detail' goal.id %}" style="display: inline;">
+  <form method="post" action="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="d-inline">
     {% csrf_token %}
     <button type="submit" name="accept_goal" class="btn btn-success">
       <i class="fas fa-check"></i>
@@ -353,7 +358,7 @@
 
   {# 开始执行 #}
   {% if can_start_execution %}
-  <form method="post" action="{% url 'plan_pages:strategic_goal_detail' goal.id %}" style="display: inline;">
+  <form method="post" action="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="d-inline">
     {% csrf_token %}
     <button type="submit" name="start_execution" class="btn btn-success">
       <i class="fas fa-play"></i>
@@ -584,7 +589,7 @@
               {% endif %}
             </td>
             <td>
-              <div class="progress" style="height: 20px;">
+              <div class="progress sgd-progress-h20">
                 <div class="progress-bar" role="progressbar" 
                      style="width: {{ child_goal.completion_rate }}%;" 
                      aria-valuenow="{{ child_goal.completion_rate }}" 
@@ -615,7 +620,7 @@
           </tr>
           {% endfor %}
           {% if child_goals_summary and child_goals_summary.display_mode != 'none' %}
-          <tr class="table-info" style="font-weight: bold;">
+          <tr class="table-info fw-bold">
             <td colspan="3" class="text-end">汇总：</td>
             <td>
               {% if child_goals_summary.display_mode == 'sum' %}
@@ -638,7 +643,7 @@
               {% endif %}
             </td>
             <td>
-              <div class="progress" style="height: 20px;">
+              <div class="progress sgd-progress-h20">
                 <div class="progress-bar bg-info" role="progressbar" 
                      style="width: {{ child_goals_summary.avg_completion_rate }}%;" 
                      aria-valuenow="{{ child_goals_summary.avg_completion_rate }}" 
@@ -737,7 +742,7 @@
         <div class="detail-field">
           <label class="detail-field-label">完成率</label>
           <div class="detail-field-value">
-            <strong style="font-size: 16px;">{{ goal.completion_rate }}%</strong>
+            <strong class="sgd-completion-fs">{{ goal.completion_rate }}%</strong>
           </div>
         </div>
       </div>
@@ -750,7 +755,7 @@
         </div>
       </div>
     </div>
-    <div class="progress" style="height: 30px;">
+    <div class="progress sgd-progress-h30">
       <div class="progress-bar progress-bar-striped progress-bar-animated" 
            role="progressbar" 
            style="width: {{ goal.completion_rate }}%;" 
