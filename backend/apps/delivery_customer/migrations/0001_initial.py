@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('production_management', '0001_initial'),
-        ('customer_management', '0001_initial_squashed_0015_remove_client_blacklist_details_remove_client_code_and_more'),
+        ('customer_management', '0015_remove_client_blacklist_details_remove_client_code_and_more'),
     ]
 
     operations = [

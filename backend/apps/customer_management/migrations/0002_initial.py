@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('customer_management', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        # ('production_management', '0001_initial'),  # 注释掉，因为production_management迁移尚未创建
+        ('production_management', '0001_initial'),
     ]
 
     operations = [

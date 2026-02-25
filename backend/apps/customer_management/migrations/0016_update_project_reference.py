@@ -71,7 +71,7 @@ def reverse_update_project_foreign_key(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('customer_management', '0001_initial_squashed_0015_remove_client_blacklist_details_remove_client_code_and_more'),
+        ('customer_management', '0015_remove_client_blacklist_details_remove_client_code_and_more'),
         # 注意：这里不直接依赖production_management，而是通过RunPython来检查表是否存在
     ]
 

@@ -9,8 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('system_management', '0006_alter_user_user_type'),
-        # 移除 permission_management 依赖，避免迁移状态构建错误
-        # ('permission_management', '0001_initial'),
+        ('permission_management', '0002_initial'),
     ]
 
     operations = [
@@ -41,7 +40,3 @@ class Migration(migrations.Migration):
         ),
     ]
     
-    # 标记为已运行，避免在构建状态时验证
-    run_before = [
-        ('permission_management', '0001_initial'),
-    ]

@@ -2,8 +2,11 @@ from django.db import migrations
 
 
 def forward(apps, schema_editor):
-    Project = apps.get_model('production_management', 'Project')
-    PaymentPlan = apps.get_model('production_management', 'PaymentPlan')
+    try:
+        Project = apps.get_model('production_management', 'Project')
+        PaymentPlan = apps.get_model('production_management', 'PaymentPlan')
+    except LookupError:
+        return
     BusinessContract = apps.get_model('customer_management', 'BusinessContract')
     BusinessPaymentPlan = apps.get_model('customer_management', 'BusinessPaymentPlan')
 
@@ -70,7 +73,7 @@ def backward(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        # ('production_management', '0001_initial'),  # 注释掉，因为production_management迁移尚未创建
+        ('production_management', '0001_initial'),
         ('customer_management', '0003_businesscontract_businesspaymentplan'),
     ]
 
